@@ -7,6 +7,7 @@ load_dotenv()
 
 # Connects to discord
 client = discord.Client()
+token = os.getenv('BOT_TOKEN')
 
 # Registered events
 @client.event
@@ -20,10 +21,10 @@ async def on_message(message):
 
     if message.content.startswith('!test'):
         await message.channel.send('I am connected and working!')
+        return
     
     if message.content.startswith('!play'):
-        member = message.author
-        voiceChannel = member.voice.channel;
-        await music_player.play_music_from_youtube(voiceChannel)
+        await music_player.play_music_from_youtube(message)
+        return
 
-client.run(os.getenv('BOT_TOKEN'))
+client.run(token)

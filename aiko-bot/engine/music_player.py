@@ -1,7 +1,9 @@
-import youtube_dl
 import discord
+import youtube_dl
 import asyncio
+import re, requests, subprocess, urllib.parse, urllib.request
 
+# Code to play music from youtube 
 ytdl_format_options = {
     'format': 'bestaudio/best',
     'outtmpl': 'downloads/%(extractor)s-%(id)s-%(title)s.%(ext)s',
@@ -39,9 +41,17 @@ class YTDLSource(discord.PCMVolumeTransformer):
         filename = data['url'] if stream else ytdl.prepare_filename(data)
         return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data)
 
-async def play_music_from_youtube(voiceChannel):
-    connection = await voiceChannel.connect()
-    player = await YTDLSource.from_url('https://www.youtube.com/watch?v=dQw4w9WgXcQ', loop=False, stream=True)
+async def play_music_from_youtube(message):
+    member = message.author
+    voice_channel = member.voice.channel
+    connection = await voice_channel.connect()
+
+    search_string_array = message.content.lower().split(' ')
+    search_string_array.pop(0)
+    formmated_search_string = ' '.join(search_string_array)
+    youtube_url = get_youtube_video(formmated_search_string)
+
+    player = await YTDLSource.from_url(youtube_url, stream=True)
     connection.play(player)
     return
 
@@ -49,8 +59,9 @@ def get_youtube_video(search):
     # Format the search term
     query_string = urllib.parse.urlencode({"search_query": search})
     # Format the search url on youtube
-    formatUrl = urllib.request.urlopen("https://www.youtube.com/results?" + query_string)
+    format_url = urllib.request.urlopen("https://www.youtube.com/results?" + query_string)
     # Find all the video results
-    search_results = re.findall(r"watch\?v=(\S{11})", formatUrl.read().decode())
+    search_results = re.findall(r"watch\?v=(\S{11})", format_url.read().decode())
     # Get the first result
-    clip2 = "https://www.youtube.com/watch?v=" + "{}".format(search_results[0])
+    clip = "https://www.youtube.com/watch?v=" + "{}".format(search_results[0])
+    return clip
