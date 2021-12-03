@@ -16,7 +16,7 @@ async def on_ready():
 
 @client.event
 async def on_message(message):
-    if message.author == client.user:
+    if message.author == client.user or message.author.bot:
         return
 
     if message.content.startswith('!test'):
@@ -24,7 +24,15 @@ async def on_message(message):
         return
     
     if message.content.startswith('!play'):
-        await music_player.play_music_from_youtube(message)
+        await music_player.execute(message)
+        return
+    
+    if message.content.startswith('!next'):
+        await music_player.execute_skip(message)
+        return
+
+    if message.content.startswith('!stop'):
+        await music_player.execute_stop(message)
         return
 
 client.run(token)
