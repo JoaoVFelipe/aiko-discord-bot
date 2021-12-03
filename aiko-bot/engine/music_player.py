@@ -1,6 +1,7 @@
 import discord
 import youtube_dl
 import asyncio
+import validators
 import re, requests, subprocess, urllib.parse, urllib.request
 
 from engine import general_actions
@@ -37,19 +38,23 @@ class YTDLSource(discord.PCMVolumeTransformer):
         self.url = data.get('url')
 
     @classmethod
-    async def from_url(cls, url, *, loop=None, stream=False):
-        loop = loop or asyncio.get_event_loop()
-        data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=not stream))
+    async def from_url(cls, url, *, loop=None, stream=False, serverQueue=None, message=None):
+        data = ytdl.extract_info(url, download=False)
         if 'entries' in data:
-            # take first item from a playlist
+            total_queue = 0
+            for item in data['entries']:
+                serverQueue['songs'].append(item['url'])
+                total_queue = total_queue + 1
+
             data = data['entries'][0]
+            serverQueue['songs'].pop(0)
+            await general_actions.send_message(message, '{} músicas adicionadas a fila! Total de músicas na fila: {}'.format(total_queue, len(serverQueue['songs'])-1))
+            
         filename = data['url'] if stream else ytdl.prepare_filename(data)
         return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data)
 
 async def execute(message):
-    search_string = get_search(message)
-    song_url = get_youtube_video(search_string)
-    player = await YTDLSource.from_url(song_url, stream=True)
+    song_url = get_youtube_url(message)
 
     serverQueue = queue.get(message.guild.id)
 
@@ -73,14 +78,15 @@ async def execute(message):
         else:
             queueContruct['connection'] = connection
             queueContruct['voice_channel'] = connection.channel
-            await play(message.guild, queueContruct['songs'][0])
+            player = await play(message.guild, queueContruct['songs'][0], message)
             return await general_actions.send_message(message, "Tocando agora: {}".format(player.title))
     else:
         serverQueue['songs'].append(song_url)
         if len(serverQueue['songs']) == 1:
-            await play(message.guild, serverQueue['songs'][0])
+            player = await play(message.guild, serverQueue['songs'][0], message)
             return await general_actions.send_message(message, "Tocando agora: {}".format(player.title))
         else: 
+            player = await YTDLSource.from_url(song_url, stream=True, serverQueue=serverQueue, message=message)
             return await general_actions.send_message(message, '{} foi adicionado a fila! Total de músicas na fila: {}'.format(player.title, len(serverQueue['songs'])-1))
 
 async def execute_skip(message): 
@@ -108,7 +114,7 @@ async def execute_stop(message):
     return
    
 
-async def play(guild, song):
+async def play(guild, song, message):
     serverQueue = queue.get(guild.id)
     if not song:
         serverQueue['voice_channel'].leave()
@@ -118,36 +124,40 @@ async def play(guild, song):
     if not serverQueue:
         return
 
-    player = await YTDLSource.from_url(song, stream=True)
-    serverQueue['connection'].play(player, after= lambda e: asyncio.run(play_next(serverQueue, guild)))
+    player = await YTDLSource.from_url(song, stream=True, serverQueue=serverQueue, message=message)
+    serverQueue['connection'].play(player, after= lambda e: asyncio.run(play_next(serverQueue, guild, message)))
+    return player
 
-async def play_next(serverQueue, guild):
+async def play_next(serverQueue, guild, message):
     if len(serverQueue['songs']):
         serverQueue['songs'].pop(0)
 
     if len(serverQueue['songs']):
         to_play = serverQueue['songs'][0]
-        await play(guild, to_play)
+        await play(guild, to_play, message)
     else:
         return
 
-def get_search(message):
-    search_string_array = message.content.lower().split(' ')
+def get_youtube_url(message):
+    # Remove command word
+    search_string_array = message.content.split(' ')
     search_string_array.pop(0)
-    formmated_search_string = ' '.join(search_string_array)
-    return formmated_search_string
+    search_string = ' '.join(search_string_array)
 
-def get_youtube_video(search):
-    # Format the search term
-    query_string = urllib.parse.urlencode({"search_query": search})
-    # Format the search url on youtube
-    format_url = urllib.request.urlopen("https://www.youtube.com/results?" + query_string)
-    # Find all the video results
-    search_results = re.findall(r"watch\?v=(\S{11})", format_url.read().decode())
-
-    if len(search_results):
-        # Get the first result
-        clip_url = "https://www.youtube.com/watch?v=" + "{}".format(search_results[0])
-        return clip_url
+    if validators.url(search_string) is True:
+        return search_string
     else:
-        return False
+        search_string = search_string.lower()
+        # Format the search term
+        query_string = urllib.parse.urlencode({"search_query": search_string})
+        # Format the search url on youtube
+        format_url = urllib.request.urlopen("https://www.youtube.com/results?" + query_string)
+        # Find all the video results
+        search_results = re.findall(r"watch\?v=(\S{11})", format_url.read().decode())
+
+        if len(search_results):
+            # Get the first result
+            clip_url = "https://www.youtube.com/watch?v=" + "{}".format(search_results[0])
+            return clip_url
+        else:
+            return False
