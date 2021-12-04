@@ -39,5 +39,9 @@ async def on_message(message):
     if message.content.startswith('!stop'):
         await music_player.execute_stop(message)
         return
+        
+    if message.content.startswith('!queue'):
+        await music_player.execute_list_queue(message)
+        return
 
 client.run(token)
