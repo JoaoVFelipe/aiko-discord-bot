@@ -48,17 +48,17 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
             data = data['entries'][0]
             serverQueue['songs'].pop(0)
-            await general_actions.send_message(message, '{} músicas adicionadas a fila! Total de músicas na fila: {}'.format(total_queue, len(serverQueue['songs'])-1))
+            await general_actions.send_message(messageEvent=message, messageText='{} foi adicionado a fila!'.format(player.title), messageDescription='Total de músicas na fila: {}'.format(len(serverQueue['songs'])-1))
             
         filename = data['url'] if stream else ytdl.prepare_filename(data)
         return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data)
 
 async def execute(message):
-    song_url = get_youtube_url(message)
-
     serverQueue = queue.get(message.guild.id)
 
     if not serverQueue:
+        song_url = get_youtube_url(message)
+
         queueContruct = {
             "text_channel": message.channel,
             "voice_channel": "",
@@ -79,35 +79,62 @@ async def execute(message):
             queueContruct['connection'] = connection
             queueContruct['voice_channel'] = connection.channel
             player = await play(message.guild, queueContruct['songs'][0], message)
-            return await general_actions.send_message(message, "Tocando agora: {}".format(player.title))
-    else:
+            return await general_actions.send_message(messageEvent=message, messageText="Tocando agora: {}".format(player.title))
+    elif serverQueue['playing']:
+        song_url = get_youtube_url(message)
         serverQueue['songs'].append(song_url)
         if len(serverQueue['songs']) == 1:
             player = await play(message.guild, serverQueue['songs'][0], message)
-            return await general_actions.send_message(message, "Tocando agora: {}".format(player.title))
+            return await general_actions.send_message(messageEvent=message, messageText="Tocando agora: {}".format(player.title))
         else: 
             player = await YTDLSource.from_url(song_url, stream=True, serverQueue=serverQueue, message=message)
-            return await general_actions.send_message(message, '{} foi adicionado a fila! Total de músicas na fila: {}'.format(player.title, len(serverQueue['songs'])-1))
+            return await general_actions.send_message(messageEvent=message, messageText='{} foi adicionado a fila!'.format(player.title), messageDescription='Total de músicas na fila: {}'.format(len(serverQueue['songs'])-1))
+    else: 
+        await execute_resume(message)
 
-async def execute_skip(message): 
+async def execute_pause(message): 
     if not message.author.voice.channel:
-        return await general_actions.send_message(message, "Você precisa estar em um canal de voz para pular alguma música!")
+        return await general_actions.send_message(messageEvent=message, messageText="Você precisa estar em um canal de voz para pausar a música!")
 
     serverQueue = queue.get(message.guild.id)
 
     if not serverQueue:
-        return await general_actions.send_message(message, "Não há músicas para pular!")
+        return await general_actions.send_message(messageEvent=message, messageText="Não há músicas para pausar!")
+
+    serverQueue['playing'] = False
+    serverQueue['connection'].pause()
+
+async def execute_resume(message): 
+    if not message.author.voice.channel:
+        return await general_actions.send_message(messageEvent=message, messageText="Você precisa estar em um canal de voz para retomar a música!")
+
+    serverQueue = queue.get(message.guild.id)
+
+    if not serverQueue:
+        return await general_actions.send_message(messageEvent=message, messageText="Não há músicas para retomar!")
+
+    serverQueue['playing'] = True
+    serverQueue['connection'].resume()
+
+async def execute_skip(message): 
+    if not message.author.voice.channel:
+        return await general_actions.send_message(messageEvent=message, messageText="Você precisa estar em um canal de voz para pular alguma música!")
+
+    serverQueue = queue.get(message.guild.id)
+
+    if not serverQueue:
+        return await general_actions.send_message(messageEvent=message, messageText="Não há músicas para pular!")
 
     serverQueue['connection'].stop()
 
 async def execute_stop(message):
     if not message.author.voice.channel:
-        return await general_actions.send_message(message, "Você precisa estar em um canal de voz para parar a música!")
+        return await general_actions.send_message(messageEvent=message, messageText="Você precisa estar em um canal de voz para parar a música!")
 
     serverQueue = queue.get(message.guild.id)
 
     if not serverQueue:
-        return await general_actions.send_message(message, "Não há músicas para parar!")
+        return await general_actions.send_message(messageEvent=message, messageText="Não há músicas para parar!")
         
     serverQueue['songs'] = []
     serverQueue['connection'].stop()

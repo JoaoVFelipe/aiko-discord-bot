@@ -1,3 +1,5 @@
+import discord
+
 async def connect_voice_channel(message):
     member = message.author
     voice_channel = member.voice.channel
@@ -9,5 +11,17 @@ async def connect_voice_channel(message):
     connection = await voice_channel.connect()
     return connection
 
-async def send_message(messageEvent, messageText):
-    return await messageEvent.channel.send(messageText)
+async def send_message(messageEvent=None, messageText='** **', messageDescription='** **', messageTitle=''):
+    if messageEvent:
+        embed = discord.Embed(
+            title=messageTitle,
+            colour=discord.Colour.from_rgb(88, 52, 235)
+        )
+        embed.add_field(
+            name=messageText,
+            value=messageDescription,
+            inline=False
+        )
+        return await messageEvent.channel.send(embed=embed)
+    else: 
+        return
