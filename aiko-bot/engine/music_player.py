@@ -8,6 +8,7 @@ from engine import general_actions, music_player
 
 # General variables
 queue = {}
+playing_now = {'url': None, 'title': None}
 
 # Code to play music from youtube 
 ytdl_format_options = {
@@ -85,7 +86,7 @@ async def execute(message):
         else: 
             player = await YTDLSource.from_url(song_url, stream=True, serverQueue=serverQueue, message=message)
             if player:
-                serverQueue['songs'].append(song_url)
+                serverQueue['songs'].append({'url': song_url, 'title': player.title})
                 return await general_actions.send_message(messageEvent=message, messageText='{} foi adicionado a fila!'.format(player.title), messageDescription='Total de músicas na fila: {}'.format(len(serverQueue['songs'])))
     else: 
         await execute_resume(message)
@@ -136,25 +137,57 @@ async def execute_stop(message):
         
     serverQueue['songs'] = []
     serverQueue['connection'].stop()
-    serverQueue['voice_channel'].leave()
-    queue.pop(guild.id)
+    await serverQueue['connection'].disconnect()
+    queue.pop(message.guild.id)
     return
    
 async def execute_list_queue(message):
+    serverQueue = queue.get(message.guild.id)
+
     if not message.author.voice.channel:
         return await general_actions.send_message(messageEvent=message, messageText="Você precisa estar em um canal de voz para listar músicas!")
-    serverQueue = queue.get(message.guild.id)
+
+    if not serverQueue:
+        return await general_actions.send_message(messageEvent=message, messageText="Nenhuma fila de música iniciada!")
+
+    else:
+        song_list = serverQueue['songs']
+        
+        playing_now_text = 'Tocando agora: {}'.format(playing_now['title'])
+
+        if(len(song_list)):
+            song_list_text = 'Próximas na fila: \n'
+            index = 1
+            for song in song_list:
+                song_list_text = song_list_text + '#{} - {}\n'.format(index, song['title'])
+                index = index + 1
+        else:
+            song_list_text = 'A fila de reprodução está vazia!'
+
+        return await general_actions.send_message(messageEvent=message, messageText=playing_now_text, messageDescription=song_list_text)
+
 
 async def play(guild, song, message):
     serverQueue = queue.get(guild.id)
     if not song:
-        serverQueue['voice_channel'].leave()
+        await serverQueue['connection'].disconnect()
         queue.pop(guild.id)
         return
     if not serverQueue:
         return
 
-    player = await YTDLSource.from_url(song, stream=True, serverQueue=serverQueue, message=message)
+    if not isinstance(song, str):
+        to_play = song['url']
+        player = await YTDLSource.from_url(to_play, stream=True, serverQueue=serverQueue, message=message)
+        playing_now['url'] = song['url']
+        playing_now['title'] = song['title']
+
+    else:
+        player = await YTDLSource.from_url(song, stream=True, serverQueue=serverQueue, message=message)
+        if player:
+            playing_now['url'] = song
+            playing_now['title'] = player.title
+
     if player:
         serverQueue['connection'].play(player, after= lambda e: asyncio.run(play_next(serverQueue, guild, message)))
         return player
@@ -178,7 +211,7 @@ async def check_is_playing(serverQueue):
 async def manage_playlist(playlist, message, serverQueue):
     total_queue = 0
     for item in playlist:
-        serverQueue['songs'].append(item['url'])
+        serverQueue['songs'].append({'url': item['url'], 'title': item['title']})
         total_queue = total_queue + 1
 
     await general_actions.send_message(messageEvent=message, messageText='{} músicas adicionadas a fila!'.format(total_queue), messageDescription='Total de músicas na fila: {}'.format(len(serverQueue['songs'])))
