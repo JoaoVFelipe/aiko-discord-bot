@@ -9,6 +9,7 @@ from engine import general_actions, music_player
 # General variables
 queue = {}
 playing_now = {'url': None, 'title': None}
+queue_list_limit = 20
 
 # Code to play music from youtube 
 ytdl_format_options = {
@@ -159,8 +160,11 @@ async def execute_list_queue(message):
             song_list_text = 'Próximas na fila: \n'
             index = 1
             for song in song_list:
-                song_list_text = song_list_text + '#{} - {}\n'.format(index, song['title'])
-                index = index + 1
+                if queue_list_limit >= index:
+                    song_list_text = song_list_text + '#{} - {}\n'.format(index, song['title'])
+                    index = index + 1
+                else:
+                    song_list_text = song_list_text + 'E mais {} música(s)!'.format(len(song_list) - queue_list_limit)
         else:
             song_list_text = 'A fila de reprodução está vazia!'
 
