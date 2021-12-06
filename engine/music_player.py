@@ -17,6 +17,7 @@ ytdl_format_options = {
     'outtmpl': 'downloads/%(extractor)s-%(id)s-%(title)s.%(ext)s',
     'restrictfilenames': True,
     'noplaylist': True,
+    'extract_flat': True,
     'nocheckcertificate': True,
     'ignoreerrors': False,
     'logtostderr': False,
@@ -27,7 +28,7 @@ ytdl_format_options = {
 }
 
 ffmpeg_options = {
-    'options': '-vn',
+    'options': '-vn --flat-playlist',
     'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'
 }
 
