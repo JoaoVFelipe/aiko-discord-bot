@@ -44,4 +44,8 @@ async def on_message(message):
         await music_player.execute_list_queue(message)
         return
 
+    if message.content.startswith('!jump_to'):
+        await music_player.execute_jump_to(message)
+        return
+
 client.run(token)

@@ -27,7 +27,8 @@ ytdl_format_options = {
 }
 
 ffmpeg_options = {
-    'options': '-vn'
+    'options': '-vn',
+    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'
 }
 
 ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
@@ -142,6 +143,34 @@ async def execute_stop(message):
     queue.pop(message.guild.id)
     return
    
+async def execute_jump_to(message):
+    if not message.author.voice.channel:
+        return await general_actions.send_message(messageEvent=message, messageText="Você precisa estar em um canal de voz para parar a música!")
+
+    serverQueue = queue.get(message.guild.id)
+
+    if not serverQueue:
+        return await general_actions.send_message(messageEvent=message, messageText="Não há uma lista em execução!")
+        
+    search_string_array = message.content.split(' ')
+    search_string_array.pop(0)
+
+    try:
+        to_jump_position = int(search_string_array[0])
+    except ValueError:
+        # Handle the exception
+        return await general_actions.send_message(messageEvent=message, messageText="Insira um número referente a posição da música na fila!", messageDescription="Dica: digite !queue para ver a lista de músicas!")
+
+    if to_jump_position:
+        to_jump_position = to_jump_position - 1
+        if serverQueue['songs'][to_jump_position]:
+            serverQueue['connection'].stop()
+            serverQueue['songs'] = serverQueue['songs'][to_jump_position:]
+            await play_next(serverQueue, message.guild, message)
+        else:
+            return await general_actions.send_message(messageEvent=message, messageText="Insira um valor que exista na fila!", messageDescription="Dica: digite !queue para ver a lista de músicas!")
+    return
+
 async def execute_list_queue(message):
     serverQueue = queue.get(message.guild.id)
 
