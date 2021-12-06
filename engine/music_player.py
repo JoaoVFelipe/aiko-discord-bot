@@ -9,7 +9,7 @@ from engine import general_actions, music_player
 # General variables
 queue = {}
 playing_now = {'url': None, 'title': None}
-queue_list_limit = 15
+queue_list_limit = 10
 
 # Code to play music from youtube 
 ytdl_format_options = {
