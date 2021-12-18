@@ -1,0 +1,50 @@
+{
+    "commands": {
+        "groups": [
+            {
+                "group_name": "Player de Música",
+                "group_description": "Comandos do player de música",
+                "group_commands": [
+                    {
+                        "name": "play",
+                        "usage": "!play [titulo, URL]",
+                        "description": "Executo uma faixa especificada, adiciono faixas a fila caso uma música já esteja executando, ou volto a executar uma faixa que esteja pausada!",
+                        "examples": [
+                            {
+                                "command":  "!play [titulo]",
+                                "explanation": "Executo uma busca por uma música com o título inserido, e toco o primeiro resultado que encontrar"
+                            },
+                            {
+                                "command":  "!play [URL]",
+                                "explanation": "Executo a faixa especificada. No caso de playlists, adiciono todos os itens da lista na fila de execução."
+                            },
+                            {
+                                "command":  "!play",
+                                "explanation": "Caso a fila de execução esteja pausada, com este comando eu retomo a execução da fila."
+                            }
+                        ]
+                    },
+                    {
+                        "name": "pause",
+                        "usage": "!play [titulo, URL]",
+                        "description": "Executo uma faixa especificada, adiciono faixas a fila caso uma música já esteja executando, ou volto a executar uma faixa que esteja pausada!",
+                        "examples": [
+                            {
+                                "command":  "!play [titulo]",
+                                "explanation": "Executo uma busca por uma música com o título inserido, e toco o primeiro resultado que encontrar"
+                            },
+                            {
+                                "command":  "!play [URL]",
+                                "explanation": "Executo a faixa especificada. No caso de playlists, adiciono todos os itens da lista na fila de execução."
+                            },
+                            {
+                                "command":  "!play",
+                                "explanation": "Caso a fila de execução esteja pausada, com este comando eu retomo a execução da fila."
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+}
