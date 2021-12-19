@@ -8,6 +8,8 @@ async def execute_help(message):
 
     to_help_command = message.content.split(' ')
     to_help_command.pop(0)
+    to_help_command = ' '.join(to_help_command)
+
 
     help_message = build_help_message(help_data, to_help_command)
 
@@ -15,10 +17,59 @@ async def execute_help(message):
 
 
 def build_help_message(help_dict, help_command):
+    message_fields = []
+    
     if(help_command):
-        return
+        found_command = False
+
+        for group in help_dict['commands']['groups']:
+            for command in group['group_commands']:
+                if(command['name'] == help_command):
+                    found_command = command
+                    break
+            
+            if found_command:
+                break
+        
+        if found_command:
+            message_fields.append(
+                 {
+                    'message_text': 'Descrição:',
+                    'message_description': found_command['description'],
+                    'inline': False
+                }
+            )
+            message_fields.append(
+                 {
+                    'message_text': 'Como usar:',
+                    'message_description': found_command['usage'],
+                    'inline': False
+                }
+            )
+
+            formatted_examples = ''
+            for example in found_command['examples']:
+                formatted_examples = formatted_examples + '**'+example['command']+': **'+'\n'
+                formatted_examples = formatted_examples + '- '+example['explanation']+'\n\n'
+
+            message_fields.append(
+                 {
+                    'message_text': 'Exemplo(s):',
+                    'message_description': formatted_examples,
+                    'inline': False
+                }
+            )
+            return {
+                'message_title': 'Ajuda - Comando '+ found_command['name'],
+                'message_fields': message_fields
+            }  
+        else:
+            return {
+                'message_title': 'Desculpe, não fui capaz de encontrar este comando :(',
+                'message_fields': []
+            }    
+                
     else:
-        message_fields = []
         for group in help_dict['commands']['groups']:
             group_commands = []
             for command in group['group_commands']:
@@ -33,6 +84,13 @@ def build_help_message(help_dict, help_command):
                 }
             )
 
+        message_fields.append(
+            {
+                'message_text': '** **',
+                'message_description': 'Digite !help *comando* caso uma explicação de algum comando específico!',
+                'inline': False
+            }
+        )
         return {
             'message_title': 'Aiko Help - Comandos!',
             'message_fields': message_fields
