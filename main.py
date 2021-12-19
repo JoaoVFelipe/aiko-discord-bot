@@ -1,7 +1,8 @@
 import os
 import discord
+import asyncio
 from dotenv import load_dotenv
-from engine import music_player, general_actions
+from engine import music_player, discord_actions, general
 
 load_dotenv()
 
@@ -20,7 +21,11 @@ async def on_message(message):
         return
 
     if message.content.startswith('!test'):
-        await general_actions.send_message(messageEvent=message, messageText='I am connected and working!')
+        await discord_actions.send_message(message_event=message, message_text='I am connected and working!')
+        return
+
+    if message.content.startswith('!help'):
+        await general.execute_help(message)
         return
 
     ############ MUSIC COMMANDS ##############
@@ -47,5 +52,24 @@ async def on_message(message):
     if message.content.startswith('!jump_to'):
         await music_player.execute_jump_to(message)
         return
+
+@client.event
+async def on_voice_state_update(member, before, after):
+    if not member.bot or member.id != client.user.id:
+        return
+
+    elif before.channel is None:
+        voice = after.channel.guild.voice_client
+        time = 0
+        while True:
+            await asyncio.sleep(1)
+            time = time + 1
+            if voice.is_playing() and not voice.is_paused():
+                time = 0
+            if time == 600:
+                await music_player.clear_queue_disconect(voice, after.channel.guild)
+            if not voice.is_connected():
+                break
+        
 
 client.run(token)

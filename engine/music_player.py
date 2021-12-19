@@ -58,6 +58,8 @@ async def execute(message):
 
     if not serverQueue:
         song_url = get_youtube_url(message)
+        if not song_url:
+            return await discord_actions.send_message(message_event=message, message_text="Não fui capaz de encontrar a faixa solicitada :(")
 
         queueContruct = {
             "text_channel": message.channel,
@@ -83,6 +85,8 @@ async def execute(message):
                 return
     elif serverQueue['playing']:
         song_url = get_youtube_url(message)
+        if not song_url:
+            return await discord_actions.send_message(message_event=message, message_text="Não fui capaz de encontrar a faixa solicitada :(")
         if len(serverQueue['songs']) == 0 and not await check_is_playing(serverQueue):
             player = await play(message.guild, song_url, message)
             return await discord_actions.send_message(message_event=message, message_text="Tocando agora: {}".format(player.title))
@@ -143,7 +147,15 @@ async def execute_stop(message):
     await serverQueue['connection'].disconnect()
     queue.pop(message.guild.id)
     return
-   
+
+async def clear_queue_disconect(connection, guild):
+    serverQueue = queue.get(guild.id)
+
+    serverQueue['songs'] = []
+    connection.stop()
+    queue.pop(guild.id)
+    await connection.disconnect()
+
 async def execute_jump_to(message):
     if not message.author.voice.channel:
         return await discord_actions.send_message(message_event=message, message_text="Você precisa estar em um canal de voz para parar a música!")
