@@ -152,6 +152,8 @@ async def clear_queue_disconect(connection, guild):
     serverQueue = queue.get(guild.id)
 
     serverQueue['songs'] = []
+    if(not serverQueue['playing']):
+        connection.resume()
     connection.stop()
     queue.pop(guild.id)
     await connection.disconnect()
@@ -246,6 +248,7 @@ async def play_next(serverQueue, guild, message):
         await play(guild, to_play, message)
         serverQueue['songs'].pop(0)
     else:
+        serverQueue['connection'].stop()
         return
 
 async def check_is_playing(serverQueue):
