@@ -1,0 +1,86 @@
+{
+    "commands": {
+        "groups": [
+            {
+                "group_name": "Player de Música",
+                "group_description": "Comandos do player de música",
+                "group_commands": [
+                    {
+                        "name": "play",
+                        "usage": "!play [titulo, URL]",
+                        "description": "Executa uma faixa especificada, adiciona faixas a fila caso uma música já esteja executando, ou volta a executar uma faixa que esteja pausada!",
+                        "examples": [
+                            {
+                                "command":  "!play [titulo]",
+                                "explanation": "Executo uma busca por uma música com o título inserido, e toco o primeiro resultado que encontrar"
+                            },
+                            {
+                                "command":  "!play [URL]",
+                                "explanation": "Executo a faixa especificada. No caso de playlists, adiciono todos os itens da lista na fila de execução."
+                            },
+                            {
+                                "command":  "!play",
+                                "explanation": "Caso a fila de execução esteja pausada, com este comando eu retomo a execução da fila."
+                            }
+                        ]
+                    },
+                    {
+                        "name": "pause",
+                        "usage": "!pause",
+                        "description": "Pausa a música em execução!",
+                        "examples": [
+                            {
+                                "command":  "!pause",
+                                "explanation": "Pauso a música em execução! Para retomar, digite !play!"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "stop",
+                        "usage": "!stop",
+                        "description": "Finaliza a execução da faixa ou da lista de execução.",
+                        "examples": [
+                            {
+                                "command":  "!stop",
+                                "explanation": "Finaliza a execução do que estiver tocando. Caso haja uma fila, a mesma é limpa e eu me desconecto do canal."
+                            }
+                        ]
+                    },
+                    {
+                        "name": "queue",
+                        "usage": "!queue",
+                        "description": "Mostra a fila de execução.",
+                        "examples": [
+                            {
+                                "command":  "!queue",
+                                "explanation": "Mostro o status atual da fila de execução, atualmente limitada!"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "next",
+                        "usage": "!next",
+                        "description": "Passa para a próxima faixa na fila de execução.",
+                        "examples": [
+                            {
+                                "command":  "!next",
+                                "explanation": "Passo para a próxima faixa na fila de execução. Caso não haja nenhuma faixa a ser tocada a seguir, paro a execução da música atual."
+                            }
+                        ]
+                    },
+                    {
+                        "name": "jump to",
+                        "usage": "!jump_to [#numero]",
+                        "description": "Pula para a faixa especificada.",
+                        "examples": [
+                            {
+                                "command":  "!jump_to 2",
+                                "explanation": "Pulo a execução para faixa com o número especificado na fila. Para ver as faixas e seus respectivos lugares na fila, digite !queue."
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+}
