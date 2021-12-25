@@ -54,32 +54,4 @@ async def on_message(message):
         await music_player.execute_jump_to(message)
         return
 
-@client.event
-async def on_voice_state_update(member, before, after):
-    print('CAIU NA FUNÇÃO', after.channel.guild.voice_client.is_connected())
-    if not member.bot or member.id != client.user.id:
-        return
-
-    elif before.channel is None:
-        voice = after.channel.guild.voice_client
-        print('ANTES DE ENTRAR NO LOOP', voice.is_connected())
-        time = 0
-        while True:
-            print('ENTROU NO LOOP')
-            if voice is None:
-                print("NO VOICE CONNECTED - BREAK")
-                break
-            await asyncio.sleep(1)
-            time = time + 1
-            print('TIMER', time)
-            if voice.is_playing() and not voice.is_paused():
-                print("RESETTING TIMER")
-                time = 0
-            if time == 20:
-                print("Disconnecting due to inactivity")
-                await music_player.clear_queue_disconect(voice, after.channel.guild)
-                break
-            
-        
-
 client.run(token)

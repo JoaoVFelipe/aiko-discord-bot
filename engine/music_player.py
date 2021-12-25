@@ -81,8 +81,10 @@ async def execute(message):
             player = await play(message.guild, song_url, message)
             if player:
                 return await discord_actions.send_message(message_event=message, message_text="Tocando agora: {}".format(player.title))
+                await inactivity_check(serverQueue=queueContruct, guild=message.guild)
             else:
                 return
+
     elif serverQueue['playing']:
         song_url = get_youtube_url(message)
         if not song_url:
@@ -148,15 +150,13 @@ async def execute_stop(message):
     queue.pop(message.guild.id)
     return
 
-async def clear_queue_disconect(connection, guild):
-    serverQueue = queue.get(guild.id)
-
+async def clear_queue_disconect(serverQueue, guild):
     serverQueue['songs'] = []
     if(not serverQueue['playing']):
         connection.resume()
-    connection.stop()
+    serverQueue['connection'].stop()
     queue.pop(guild.id)
-    await connection.disconnect()
+    await serverQueue['connection'].disconnect()
 
 async def execute_jump_to(message):
     if not message.author.voice.channel:
@@ -253,7 +253,7 @@ async def play_next(serverQueue, guild, message):
 
 async def check_is_playing(serverQueue):
     if serverQueue and serverQueue['connection']:
-        return serverQueue['connection'].is_playing()
+        return serverQueue['connection'].is_playing() or serverQueue['connection'].is_paused()
     else:
         return False
 
@@ -268,6 +268,15 @@ async def manage_playlist(playlist, message, serverQueue):
         return await music_player.play_next(serverQueue=serverQueue, message=message, guild=message.guild)
     else:
         return
+
+async def inactivity_check(serverQueue, guild):
+    if(serverQueue['connection']):
+        while True:
+            await asyncio.sleep(300)
+            is_playing = await check_is_playing(serverQueue)
+            if not is_playing:
+                await clear_queue_disconect(serverQueue, guild)
+                break
 
 def get_youtube_url(message):
     # Remove command word
