@@ -56,12 +56,13 @@ async def on_message(message):
 
 @client.event
 async def on_voice_state_update(member, before, after):
+    print('CAIU NA FUNÇÃO', after.channel.guild.voice_client.is_connected())
     if not member.bot or member.id != client.user.id:
         return
 
     elif before.channel is None:
         voice = after.channel.guild.voice_client
-        print('ANTES DE ENTRAR NO LOOP')
+        print('ANTES DE ENTRAR NO LOOP', voice.is_connected())
         time = 0
         while True:
             print('ENTROU NO LOOP')
