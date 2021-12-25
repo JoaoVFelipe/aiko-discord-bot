@@ -66,6 +66,9 @@ async def on_voice_state_update(member, before, after):
         time = 0
         while True:
             print('ENTROU NO LOOP')
+            if voice is None:
+                print("NO VOICE CONNECTED - BREAK")
+                break
             await asyncio.sleep(1)
             time = time + 1
             print('TIMER', time)
@@ -75,9 +78,8 @@ async def on_voice_state_update(member, before, after):
             if time == 20:
                 print("Disconnecting due to inactivity")
                 await music_player.clear_queue_disconect(voice, after.channel.guild)
-            if not voice.is_connected():
-                print("NO VOICE CONNECTED - BREAK")
                 break
+            
         
 
 client.run(token)
