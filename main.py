@@ -1,7 +1,6 @@
 import os
 import discord
 import asyncio
-import eventlet
 
 from dotenv import load_dotenv
 from engine import music_player, discord_actions, general
