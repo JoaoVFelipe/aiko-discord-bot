@@ -1,6 +1,8 @@
 import os
 import discord
 import asyncio
+import eventlet
+
 from dotenv import load_dotenv
 from engine import music_player, discord_actions, general
 
@@ -60,18 +62,25 @@ async def on_voice_state_update(member, before, after):
 
     elif before.channel is None:
         voice = after.channel.guild.voice_client
-        time = 0
-        while True:
-            await asyncio.sleep(1)
-            time = time + 1
-            print('TIMER', time)
-            if voice.is_playing() and not voice.is_paused():
-                time = 0
-            if time == 20:
-                print("Disconnecting due to inactivity")
-                await music_player.clear_queue_disconect(voice, after.channel.guild)
-            if not voice.is_connected():
-                break
+        print('ANTES DE ENTRAR NO LOOP')
+        eventlet.spawn(disconnect_timer_loop)
         
+        
+async def disconnect_timer_loop():
+    print('ENTROU NO LOOP')
+    time = 0
+    while True:
+        await asyncio.sleep(1)
+        time = time + 1
+        print('TIMER', time)
+        if voice.is_playing() and not voice.is_paused():
+            print("RESETTING TIMER")
+            time = 0
+        if time == 20:
+            print("Disconnecting due to inactivity")
+            await music_player.clear_queue_disconect(voice, after.channel.guild)
+        if not voice.is_connected():
+            print("NO VOICE CONNECTED - BREAK")
+            break
 
 client.run(token)
