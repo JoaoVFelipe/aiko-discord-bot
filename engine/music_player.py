@@ -76,8 +76,8 @@ async def execute(message):
         if not connection:
             return
         else:
-            queue[message.guild.id]['connection'] = connection
-            queue[message.guild.id]['voice_channel'] = connection.channel
+            queueContruct['connection'] = connection
+            queueContruct['voice_channel'] = connection.channel
             player = await play(message.guild, song_url, message)
             if player:
                 return await discord_actions.send_message(message_event=message, message_text="Tocando agora: {}".format(player.title))
