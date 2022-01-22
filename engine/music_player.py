@@ -76,12 +76,11 @@ async def execute(message):
         if not connection:
             return
         else:
-            queueContruct['connection'] = connection
-            queueContruct['voice_channel'] = connection.channel
+            queue[message.guild.id]['connection'] = connection
+            queue[message.guild.id]['voice_channel'] = connection.channel
             player = await play(message.guild, song_url, message)
             if player:
                 return await discord_actions.send_message(message_event=message, message_text="Tocando agora: {}".format(player.title))
-                await inactivity_check(serverQueue=queueContruct, guild=message.guild)
             else:
                 return
 
@@ -149,14 +148,6 @@ async def execute_stop(message):
     await serverQueue['connection'].disconnect()
     queue.pop(message.guild.id)
     return
-
-async def clear_queue_disconect(serverQueue, guild):
-    serverQueue['songs'] = []
-    if(not serverQueue['playing']):
-        connection.resume()
-    serverQueue['connection'].stop()
-    queue.pop(guild.id)
-    await serverQueue['connection'].disconnect()
 
 async def execute_jump_to(message):
     if not message.author.voice.channel:
@@ -248,7 +239,8 @@ async def play_next(serverQueue, guild, message):
         await play(guild, to_play, message)
         serverQueue['songs'].pop(0)
     else:
-        serverQueue['connection'].stop()
+        if serverQueue and serverQueue['connection']:
+            serverQueue['connection'].stop()
         return
 
 async def check_is_playing(serverQueue):
@@ -268,15 +260,6 @@ async def manage_playlist(playlist, message, serverQueue):
         return await music_player.play_next(serverQueue=serverQueue, message=message, guild=message.guild)
     else:
         return
-
-async def inactivity_check(serverQueue, guild):
-    if(serverQueue['connection']):
-        while True:
-            await asyncio.sleep(300)
-            is_playing = await check_is_playing(serverQueue)
-            if not is_playing:
-                await clear_queue_disconect(serverQueue, guild)
-                break
 
 def get_youtube_url(message):
     # Remove command word
