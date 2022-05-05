@@ -2,6 +2,8 @@ import os
 import discord
 import asyncio
 
+from apscheduler.schedulers.background import BackgroundScheduler
+
 from dotenv import load_dotenv
 from engine import music_player, discord_actions, general
 
@@ -10,6 +12,8 @@ load_dotenv()
 # Connects to discord
 client = discord.Client()
 token = os.getenv('BOT_TOKEN')
+
+sched = BackgroundScheduler()
 
 # Registered events
 @client.event
@@ -54,4 +58,11 @@ async def on_message(message):
         await music_player.execute_jump_to(message)
         return
 
+### Scheduler Functions
+@sched.scheduled_job('interval', seconds=5)
+def timed_job():
+    print('This job is run every three minutes.')
+
+sched.start()
+print("Scheduled started")
 client.run(token)

@@ -11,6 +11,16 @@ async def connect_voice_channel(message):
     connection = await voice_channel.connect()
     return connection
 
+async def disconnect_voice_channel(message):
+    member = message.author
+    voice_channel = member.voice.channel
+
+    if not voice_channel:
+        await send_message(message, 'Você precisa estar em um canal de voz para executar este comando!')
+        return False
+
+    connection = await voice_channel.disconnect()
+
 async def send_message(message_event=None, message_title='', message_fields=[], message_text='** **', message_description='** **'):
     if message_event:
         embed = discord.Embed(
