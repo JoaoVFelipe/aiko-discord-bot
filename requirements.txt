@@ -1,7 +1,7 @@
 aiohttp
 async-timeout==3.0.1
 asyncio==3.4.3
-APScheduler==3.0.0
+APScheduler
 attrs
 beautifulsoup4==4.10.0
 bella==2.1.5
