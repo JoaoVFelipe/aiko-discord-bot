@@ -13,7 +13,7 @@ async def execute_help(message):
 
     help_message = build_help_message(help_data, to_help_command)
 
-    await discord_actions.send_message(message_event=message, message_title=help_message['message_title'], message_fields=help_message['message_fields'])
+    await discord_actions.send_message(channel=message.channel, message_title=help_message['message_title'], message_fields=help_message['message_fields'])
 
 
 def build_help_message(help_dict, help_command):

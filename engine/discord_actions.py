@@ -2,10 +2,12 @@ import discord
 
 async def connect_voice_channel(message):
     member = message.author
+    if not member.voice:
+        return False
+
     voice_channel = member.voice.channel
 
     if not voice_channel:
-        await send_message(message, 'Você precisa estar em um canal de voz para executar este comando!')
         return False
 
     connection = await voice_channel.connect()
@@ -13,16 +15,18 @@ async def connect_voice_channel(message):
 
 async def disconnect_voice_channel(message):
     member = message.author
+    if not member.voice:
+        return False
+
     voice_channel = member.voice.channel
 
     if not voice_channel:
-        await send_message(message, 'Você precisa estar em um canal de voz para executar este comando!')
         return False
 
     connection = await voice_channel.disconnect()
 
-async def send_message(message_event=None, message_title='', message_fields=[], message_text='** **', message_description='** **'):
-    if message_event:
+async def send_message(channel=None, message_title='', message_fields=[], message_text='** **', message_description='** **'):
+    if channel:
         embed = discord.Embed(
             title=message_title,
             colour=discord.Colour.from_rgb(88, 52, 235)
@@ -43,6 +47,6 @@ async def send_message(message_event=None, message_title='', message_fields=[], 
                     inline=False
                 )
 
-        return await message_event.channel.send(embed=embed)
+        return await channel.send(embed=embed)
     else: 
         return

@@ -8,7 +8,6 @@ from engine import discord_actions, music_player
 
 # General variables
 queue = {}
-playing_now = {'url': None, 'title': None}
 queue_list_limit = 10
 
 # Code to play music from youtube 
@@ -59,7 +58,7 @@ async def execute(message):
     if not serverQueue:
         song_url = get_youtube_url(message)
         if not song_url:
-            return await discord_actions.send_message(message_event=message, message_text="Não fui capaz de encontrar a faixa solicitada :(")
+            return await discord_actions.send_message(channel=message.channel, message_text="Não fui capaz de encontrar a faixa solicitada :(")
 
         queueContruct = {
             "text_channel": message.channel,
@@ -69,79 +68,84 @@ async def execute(message):
             "playing": True 
         }
 
-        queue[message.guild.id] = queueContruct
         # Connect to user voice channel
         connection = await discord_actions.connect_voice_channel(message)
 
-        if not connection:
-            return
+        if not connection or not connection.channel:
+            await discord_actions.send_message(message.channel, 'Você precisa estar em um canal de voz para executar este comando!')
+            return False
         else:
             queueContruct['connection'] = connection
             queueContruct['voice_channel'] = connection.channel
+            queue[message.guild.id] = queueContruct
             player = await play(message.guild, song_url, message)
             if player:
-                return await discord_actions.send_message(message_event=message, message_text="Tocando agora: {}".format(player.title))
+                return await discord_actions.send_message(channel=message.channel, message_text="Tocando agora: {}".format(player.title))
             else:
                 return
 
     elif serverQueue['playing']:
         song_url = get_youtube_url(message)
         if not song_url:
-            return await discord_actions.send_message(message_event=message, message_text="Não fui capaz de encontrar a faixa solicitada :(")
+            return await discord_actions.send_message(channel=message.channel, message_text="Não fui capaz de encontrar a faixa solicitada :(")
         if len(serverQueue['songs']) == 0 and not await check_is_playing(serverQueue):
             player = await play(message.guild, song_url, message)
-            return await discord_actions.send_message(message_event=message, message_text="Tocando agora: {}".format(player.title))
+            return await discord_actions.send_message(channel=message.channel, message_text="Tocando agora: {}".format(player.title))
         else: 
             player = await YTDLSource.from_url(song_url, stream=True, serverQueue=serverQueue, message=message)
             if player:
                 serverQueue['songs'].append({'url': song_url, 'title': player.title})
-                return await discord_actions.send_message(message_event=message, message_text='{} foi adicionado a fila!'.format(player.title), message_description='Total de músicas na fila: {}'.format(len(serverQueue['songs'])))
+                return await discord_actions.send_message(channel=message.channel, message_text='{} foi adicionado a fila!'.format(player.title), message_description='Total de músicas na fila: {}'.format(len(serverQueue['songs'])))
     else: 
         await execute_resume(message)
 
 async def execute_pause(message): 
     if not message.author.voice.channel:
-        return await discord_actions.send_message(message_event=message, message_text="Você precisa estar em um canal de voz para pausar a música!")
+        return await discord_actions.send_message(channel=message.channel, message_text="Você precisa estar em um canal de voz para pausar a música!")
 
     serverQueue = queue.get(message.guild.id)
 
     if not serverQueue:
-        return await discord_actions.send_message(message_event=message, message_text="Não há músicas para pausar!")
+        return await discord_actions.send_message(channel=message.channel, message_text="Não há músicas para pausar!")
 
     serverQueue['playing'] = False
     serverQueue['connection'].pause()
 
 async def execute_resume(message): 
     if not message.author.voice.channel:
-        return await discord_actions.send_message(message_event=message, message_text="Você precisa estar em um canal de voz para retomar a música!")
+        return await discord_actions.send_message(channel=message.channel, message_text="Você precisa estar em um canal de voz para retomar a música!")
 
     serverQueue = queue.get(message.guild.id)
 
     if not serverQueue:
-        return await discord_actions.send_message(message_event=message, message_text="Não há músicas para retomar!")
+        return await discord_actions.send_message(channel=message.channel, message_text="Não há músicas para retomar!")
 
     serverQueue['playing'] = True
     serverQueue['connection'].resume()
 
 async def execute_skip(message): 
     if not message.author.voice.channel:
-        return await discord_actions.send_message(message_event=message, message_text="Você precisa estar em um canal de voz para pular alguma música!")
+        return await discord_actions.send_message(channel=message.channel, message_text="Você precisa estar em um canal de voz para pular alguma música!")
 
     serverQueue = queue.get(message.guild.id)
 
     if not serverQueue:
-        return await discord_actions.send_message(message_event=message, message_text="Não há músicas para pular!")
+        return await discord_actions.send_message(channel=message.channel, message_text="Não há músicas para pular!")
 
-    serverQueue['connection'].stop()
+    if len(serverQueue['songs']):
+        serverQueue['connection'].stop()
+        # await play_next(serverQueue, message.guild, message)
+    else:
+        serverQueue['connection'].stop()
 
 async def execute_stop(message):
     if not message.author.voice.channel:
-        return await discord_actions.send_message(message_event=message, message_text="Você precisa estar em um canal de voz para parar a música!")
+        return await discord_actions.send_message(channel=message.channel, message_text="Você precisa estar em um canal de voz para parar a música!")
 
     serverQueue = queue.get(message.guild.id)
 
     if not serverQueue:
-        return await discord_actions.send_message(message_event=message, message_text="Não há músicas para parar!")
+        return await discord_actions.send_message(channel=message.channel, message_text="Não há músicas para parar!")
         
     serverQueue['songs'] = []
     serverQueue['connection'].stop()
@@ -151,12 +155,12 @@ async def execute_stop(message):
 
 async def execute_jump_to(message):
     if not message.author.voice.channel:
-        return await discord_actions.send_message(message_event=message, message_text="Você precisa estar em um canal de voz para parar a música!")
+        return await discord_actions.send_message(channel=message.channel, message_text="Você precisa estar em um canal de voz para parar a música!")
 
     serverQueue = queue.get(message.guild.id)
 
     if not serverQueue:
-        return await discord_actions.send_message(message_event=message, message_text="Não há uma lista em execução!")
+        return await discord_actions.send_message(channel=message.channel, message_text="Não há uma lista em execução!")
         
     search_string_array = message.content.split(' ')
     search_string_array.pop(0)
@@ -165,31 +169,31 @@ async def execute_jump_to(message):
         to_jump_position = int(search_string_array[0])
     except ValueError:
         # Handle the exception
-        return await discord_actions.send_message(message_event=message, message_text="Insira um número referente a posição da música na fila!", message_description="Dica: digite !queue para ver a lista de músicas!")
+        return await discord_actions.send_message(channel=message.channel, message_text="Insira um número referente a posição da música na fila!", message_description="Dica: digite !queue para ver a lista de músicas!")
 
     if to_jump_position:
         to_jump_position = to_jump_position - 1
-        if serverQueue['songs'][to_jump_position]:
+        if len(serverQueue['songs']) >= to_jump_position:
             serverQueue['connection'].stop()
             serverQueue['songs'] = serverQueue['songs'][to_jump_position:]
             await play_next(serverQueue, message.guild, message)
         else:
-            return await discord_actions.send_message(message_event=message, message_text="Insira um valor que exista na fila!", message_description="Dica: digite !queue para ver a lista de músicas!")
+            return await discord_actions.send_message(channel=message.channel, message_text="Insira um valor que exista na fila!", message_description="Dica: digite !queue para ver a lista de músicas!")
     return
 
 async def execute_list_queue(message):
     serverQueue = queue.get(message.guild.id)
 
     if not message.author.voice.channel:
-        return await discord_actions.send_message(message_event=message, message_text="Você precisa estar em um canal de voz para listar músicas!")
+        return await discord_actions.send_message(channel=message.channel, message_text="Você precisa estar em um canal de voz para listar músicas!")
 
     if not serverQueue:
-        return await discord_actions.send_message(message_event=message, message_text="Nenhuma fila de música iniciada!")
+        return await discord_actions.send_message(channel=message.channel, message_text="Nenhuma fila de música iniciada!")
 
     else:
         song_list = serverQueue['songs']
         
-        playing_now_text = 'Tocando agora: {}'.format(playing_now['title'])
+        playing_now_text = 'Tocando agora: {}'.format(serverQueue['playing_now']['title'])
 
         if(len(song_list)):
             song_list_text = 'Próximas na fila: \n'
@@ -200,10 +204,11 @@ async def execute_list_queue(message):
                     index = index + 1
                 else:
                     song_list_text = song_list_text + 'E mais {} música(s)!'.format(len(song_list) - queue_list_limit)
+                    break
         else:
             song_list_text = 'A fila de reprodução está vazia!'
 
-        return await discord_actions.send_message(message_event=message, message_text=playing_now_text, message_description=song_list_text)
+        return await discord_actions.send_message(channel=message.channel, message_text=playing_now_text, message_description=song_list_text)
 
 
 async def play(guild, song, message):
@@ -218,15 +223,13 @@ async def play(guild, song, message):
     if not isinstance(song, str):
         to_play = song['url']
         player = await YTDLSource.from_url(to_play, stream=True, serverQueue=serverQueue, message=message)
-        playing_now['url'] = song['url']
-        playing_now['title'] = song['title']
-
+        serverQueue['playing_now'] = {'url':song['url'], 'title':song['title']}
+        queue[guild.id] = serverQueue
     else:
         player = await YTDLSource.from_url(song, stream=True, serverQueue=serverQueue, message=message)
         if player:
-            playing_now['url'] = song
-            playing_now['title'] = player.title
-
+            serverQueue['playing_now'] = {'url':song, 'title':player.title}
+            queue[guild.id] = serverQueue
     if player:
         serverQueue['connection'].play(player, after= lambda e: asyncio.run(play_next(serverQueue, guild, message)))
         return player
@@ -255,7 +258,7 @@ async def manage_playlist(playlist, message, serverQueue):
         serverQueue['songs'].append({'url': item['url'], 'title': item['title']})
         total_queue = total_queue + 1
 
-    await discord_actions.send_message(message_event=message, message_text='{} músicas adicionadas a fila!'.format(total_queue), message_description='Total de músicas na fila: {}'.format(len(serverQueue['songs'])))
+    await discord_actions.send_message(channel=message.channel, message_text='{} músicas adicionadas a fila!'.format(total_queue), message_description='Total de músicas na fila: {}'.format(len(serverQueue['songs'])))
     if not await check_is_playing(serverQueue):
         return await music_player.play_next(serverQueue=serverQueue, message=message, guild=message.guild)
     else:
@@ -284,3 +287,20 @@ def get_youtube_url(message):
             return clip_url
         else:
             return False
+
+async def check_inactivity_queues():
+    print("Checking for inactivity...")
+    try:
+        for key, instance in list(queue.items()):
+                serverQueue = queue.get(key)
+
+                if not await check_is_playing(serverQueue):
+                    print("Inactivity found! Disconnecting Id:", key)
+
+                    await discord_actions.send_message(channel=instance['text_channel'], message_text='Hey, alguém aí?', message_description='Estou desconectando devido a inatividade. Qualquer coisa estou por aqui, só chamar ;)')
+                    serverQueue['connection'].stop()
+                    await serverQueue['connection'].disconnect()
+                    queue.pop(key)
+                    print("Inactive instance disconected!")
+    except:
+        print("Erro ao tentar desconectar a instância do bot inativa.")

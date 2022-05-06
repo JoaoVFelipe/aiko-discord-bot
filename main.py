@@ -2,7 +2,7 @@ import os
 import discord
 import asyncio
 
-from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from dotenv import load_dotenv
 from engine import music_player, discord_actions, general
@@ -12,8 +12,6 @@ load_dotenv()
 # Connects to discord
 client = discord.Client()
 token = os.getenv('BOT_TOKEN')
-
-sched = BackgroundScheduler()
 
 # Registered events
 @client.event
@@ -26,7 +24,7 @@ async def on_message(message):
         return
 
     if message.content.startswith('!test'):
-        await discord_actions.send_message(message_event=message, message_text='I am connected and working!')
+        await discord_actions.send_message(channel=message.channel, message_text='I am connected and working!')
         return
 
     if message.content.startswith('!help'):
@@ -59,10 +57,12 @@ async def on_message(message):
         return
 
 ### Scheduler Functions
-@sched.scheduled_job('interval', seconds=5)
-def timed_job():
-    print('This job is run every three minutes.')
+async def timed_job():
+    print(await music_player.check_inactivity_queues())
 
-sched.start()
+scheduler = AsyncIOScheduler()
+scheduler.add_job(timed_job, "interval", minutes=15)
+
+scheduler.start()
 print("Scheduled started")
 client.run(token)
