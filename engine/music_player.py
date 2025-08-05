@@ -25,7 +25,9 @@ ytdl_format_options = {
     'quiet': True,
     'no_warnings': True,
     'default_search': 'ytsearch',
-    'source_address': '0.0.0.0'
+    'source_address': '0.0.0.0',
+    'cookiefile': 'cookies.txt'
+
 }
 
 # FFMPEG_PATH = os.path.join(os.path.dirname(__file__), '..', 'assets', 'ffmpeg', 'bin', 'ffmpeg.exe')
