@@ -13,6 +13,8 @@ from engine import discord_actions, music_player
 queue = {}
 queue_list_limit = 10
 
+COOKIES_PATH = os.getenv('COOKIES_PATH')
+
 # yt-dlp options
 ytdl_format_options = {
     'format': 'bestaudio/best',
@@ -26,8 +28,7 @@ ytdl_format_options = {
     'no_warnings': True,
     'default_search': 'ytsearch',
     'source_address': '0.0.0.0',
-    'cookiefile': 'cookies.txt'
-
+    'cookiefile': COOKIES_PATH
 }
 
 # FFMPEG_PATH = os.path.join(os.path.dirname(__file__), '..', 'assets', 'ffmpeg', 'bin', 'ffmpeg.exe')
