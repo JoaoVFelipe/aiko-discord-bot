@@ -1,6 +1,9 @@
 import os
 import discord
+
 import yt_dlp as youtube_dl
+from yt_dlp.utils import DownloadError
+
 import asyncio
 import validators
 import re, urllib.parse, urllib.request
@@ -51,8 +54,24 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
     @classmethod
     async def from_url(cls, url, *, loop=None, stream=True, serverQueue=None, message=None):
-        """Extrai informações do vídeo ou playlist e retorna um player pronto"""
-        data = await asyncio.to_thread(lambda: ytdl.extract_info(url, download=False))
+        try:
+            data = await asyncio.to_thread(lambda: ytdl.extract_info(url, download=False))
+        except DownloadError as e:
+            error_msg = str(e).lower()
+            # Verifica se é vídeo que exige login
+            if "sign in to confirm" in error_msg or "private" in error_msg:
+                await discord_actions.send_message(
+                    channel=message.channel,
+                    message_text="❌ Não consegui reproduzir essa música! Provavelmente é um link privado. Por favor, tente outro link!"
+                )
+                return False
+            # Outros erros do YouTube
+            await discord_actions.send_message(
+                channel=message.channel,
+                message_text="❌ Não consegui reproduzir essa música! Tive um erro inesperado, por favor informe o desenvolvedor!"
+            )
+            return False
+
         if not data:
             return False
 
