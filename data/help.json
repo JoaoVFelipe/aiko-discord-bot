@@ -17,10 +17,6 @@
                             {
                                 "command":  "!play [URL]",
                                 "explanation": "Executo a faixa especificada. No caso de playlists, adiciono todos os itens da lista na fila de execução."
-                            },
-                            {
-                                "command":  "!play",
-                                "explanation": "Caso a fila de execução esteja pausada, com este comando eu retomo a execução da fila."
                             }
                         ]
                     },
@@ -31,7 +27,18 @@
                         "examples": [
                             {
                                 "command":  "!pause",
-                                "explanation": "Pauso a música em execução! Para retomar, digite !play!"
+                                "explanation": "Pauso a música em execução! Para retomar, digite !resume!"
+                            }
+                        ]
+                    },
+                      {
+                        "name": "resume",
+                        "usage": "!resume",
+                        "description": "Retoma a música pausada!",
+                        "examples": [
+                            {
+                                "command":  "!resume",
+                                "explanation": "Retomo a música que esteja pausada!"
                             }
                         ]
                     },
