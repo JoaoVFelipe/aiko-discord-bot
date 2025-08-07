@@ -9,7 +9,8 @@ import discord
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from dotenv import load_dotenv
 
-from engine import music_player, discord_actions, general
+from engine import discord_actions, general
+from engine.music_player import music_player
 
 # Configura logging para melhor depuração
 logging.basicConfig(level=logging.INFO)
