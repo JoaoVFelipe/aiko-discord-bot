@@ -56,12 +56,12 @@ class GuildQueue:
 
     def get_queue_summary(self, limit=10) -> str:
         if not self.songs:
-            return "A fila de reprodução está vazia!"
+            return "📭 Nenhuma música na fila por enquanto. Quer que eu toque algo pra animar?"
         lines = []
         for i, song in enumerate(self.songs[:limit], 1):
             lines.append(f"#{i} - {song['title']}")
         if len(self.songs) > limit:
-            lines.append(f"E mais {len(self.songs) - limit} música(s)...")
+            lines.append(f"➕ E tem mais {len(self.songs) - limit} músicas na fila esperando a vez!")
         return '\n'.join(lines)
 
     async def play(self, bot, song_url: str):
