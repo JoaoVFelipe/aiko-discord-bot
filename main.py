@@ -50,13 +50,13 @@ scheduler = AsyncIOScheduler(
     },
 )
 
-def _job_listener(event):
-    if event.exception:
-        log.exception(f"[scheduler] Job {getattr(event, 'job_id', '?')} falhou", exc_info=event.exception)
-    else:
-        log.debug(f"[scheduler] Job {getattr(event, 'job_id', '?')} executado com sucesso")
+# def _job_listener(event):
+#     if event.exception:
+#         log.exception(f"[scheduler] Job {getattr(event, 'job_id', '?')} falhou", exc_info=event.exception)
+#     else:
+#         log.debug(f"[scheduler] Job {getattr(event, 'job_id', '?')} executado com sucesso")
 
-scheduler.add_listener(_job_listener, EVENT_JOB_ERROR | EVENT_JOB_EXECUTED)
+# scheduler.add_listener(_job_listener, EVENT_JOB_ERROR | EVENT_JOB_EXECUTED)
 
 async def inactivity_check_job():
     try:
