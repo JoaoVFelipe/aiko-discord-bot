@@ -1,106 +1,169 @@
 import os
 import asyncio
 import logging
-
 import signal
-import sys
+
+from dotenv import load_dotenv
 
 import discord
+from discord.ext import commands
+
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from dotenv import load_dotenv
+from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED
+from apscheduler.triggers.interval import IntervalTrigger
+
+from zoneinfo import ZoneInfo
 
 from engine import discord_actions, general
 from engine.music_player import music_player
+from engine.events import birthdays
 
-# Configura logging para melhor depuração
-logging.basicConfig(level=logging.INFO)
+# ----------------- LOGGING -----------------
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+)
+log = logging.getLogger("aiko.main")
 
-# Carrega variáveis de ambiente
+# ----------------- ENV -----------------
 load_dotenv()
-TOKEN = os.getenv('BOT_TOKEN')
+TOKEN = os.getenv("BOT_TOKEN")
 
-# Configura intents necessários
+if not TOKEN:
+    raise ValueError("O token do bot não foi definido no .env (BOT_TOKEN).")
+
+# ----------------- INTENTS/BOT -----------------
 intents = discord.Intents.default()
 intents.message_content = True
+intents.voice_states = True 
 
-# Cria cliente do Discord
-client = discord.Client(intents=intents)
+bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 
-# Scheduler para tarefas agendadas
-scheduler = AsyncIOScheduler()
+# ----------------- SCHEDULER -----------------
+## Funções para as features que precisam rodar de tempos em tempos
+scheduler = AsyncIOScheduler(
+    timezone=ZoneInfo("America/Sao_Paulo"),
+    job_defaults={
+        "coalesce": True,         
+        "max_instances": 1,      
+        "misfire_grace_time": 30,  
+    },
+)
 
-async def timed_job():
-    """Função executada periodicamente pelo scheduler"""
-    result = await music_player.check_inactivity_queues()
-    print(result)
+def _job_listener(event):
+    if event.exception:
+        log.exception(f"[scheduler] Job {getattr(event, 'job_id', '?')} falhou", exc_info=event.exception)
+    else:
+        log.debug(f"[scheduler] Job {getattr(event, 'job_id', '?')} executado com sucesso")
+
+scheduler.add_listener(_job_listener, EVENT_JOB_ERROR | EVENT_JOB_EXECUTED)
+
+async def inactivity_check_job():
+    try:
+        result = await music_player.check_inactivity_queues()
+        if result:
+            log.info(f"[music] {result}")
+    except Exception as e:
+        log.exception(f"Erro no inactivity_check_job: {e}")
+
+async def birthday_announcement_job():
+    """Roda 1x/min e tenta anunciar para cada guild, se 'já deu a hora' e não anunciou hoje."""
+    try:
+        # itera pelas guilds atuais do bot
+        for guild in bot.guilds:
+            try:
+                announced = await birthdays.check_announce_for_guild(guild)
+                if announced:
+                    log.info(f"[events - birthdays] Anúncio enviado em guild {guild.id}")
+            except Exception as eg:
+                log.exception(f"Erro ao anunciar em guild {guild.id}: {eg}")
+    except Exception as e:
+        log.exception(f"Erro no birthday_announcement_job: {e}")
 
 # ----------------- EVENTOS -----------------
-@client.event
+@bot.event
 async def on_ready():
-    print(f"Aiko bot conectado como {client.user}")
-    # Inicia scheduler quando o bot estiver pronto
-    if not scheduler.running:
-        scheduler.add_job(timed_job, "interval", minutes=15)
-        scheduler.start()
-        print("Scheduler iniciado.")
+    ## Inicia o bot e registra os eventos schedule
+    log.info(f"Aiko bot conectado como {bot.user} (id={bot.user.id})")
 
-@client.event
-async def on_message(message: discord.Message):
-    # Ignora mensagens do próprio bot
-    if message.author.bot:
-        return
-
-    content = message.content.strip()
-
-    # ------------- Comandos ---------------
-    if content.startswith('!test'):
-        await discord_actions.send_message(
-            channel=message.channel, 
-            message_text='I am connected and working!'
+    if not getattr(bot, "_scheduler_started", False):
+        scheduler.add_job(
+            inactivity_check_job,
+            trigger=IntervalTrigger(minutes=15),
+            id="music_inactivity_check",
+            replace_existing=True,
+            next_run_time=None,
         )
 
-    elif content.startswith('!help'):
-        await general.execute_help(message)
-        
-    # ----------- Music player commands --------------
-    elif content.startswith('!play'):
-        await music_player.execute(message)
-    
-    elif content.startswith('!resume'):
-        await music_player.execute_resume(message)
+        scheduler.add_job(
+            birthday_announcement_job,
+            trigger=IntervalTrigger(minutes=1),
+            id="bday_announcement_check",
+            replace_existing=True,
+        )
 
-    elif content.startswith('!pause'):
-        await music_player.execute_pause(message)
+        scheduler.start()
+        bot._scheduler_started = True
 
-    elif content.startswith('!next'):
-        await music_player.execute_skip(message)
+        bot.scheduler = scheduler
 
-    elif content.startswith('!stop'):
-        await music_player.execute_stop(message)
+        log.info("Scheduler iniciado.")
 
-    elif content.startswith('!queue'):
-        await music_player.execute_list_queue(message)
+# Comandos gerais - Fora dos cogs
+@bot.command(name="test")
+async def test_cmd(ctx: commands.Context):
+    await discord_actions.send_message(channel=ctx.channel, message_text="I am connected and working!")
 
-    elif content.startswith('!jump_to'):
-        await music_player.execute_jump_to(message)
+@bot.command(name="help")
+async def help_cmd(ctx: commands.Context):
+    await general.execute_help(ctx.message)
 
-    # # ------------ AI commands ------------------
-    # if message.content.startswith('!aiko'):
-    #    await ai_chat.execute_ai_command(message)
-# ----------------- EXECUÇÃO -----------------
+@bot.event
+async def on_command_error(ctx: commands.Context, error: commands.CommandError):
+    from discord.ext.commands import MissingPermissions, BadArgument, UserInputError, CommandNotFound
+    if isinstance(error, CommandNotFound):
+        return
+    if isinstance(error, MissingPermissions):
+        return await ctx.reply("Você não tem permissão para executar este comando.")
+    if isinstance(error, (BadArgument, UserInputError)):
+        return await ctx.reply("Argumentos inválidos para este comando.")
+    log.exception(f"Erro em comando: {error}")
+    try:
+        await ctx.reply("⚠️ Ocorreu um erro ao executar este comando.")
+    except:
+        pass
+
+# ----------------- BOOTSTRAP -----------------
+async def startup():
+    # Carrega cogs (responsaveis pelos comandos)
+    await bot.load_extension("engine.cogs.birthdays") 
+    await bot.load_extension("engine.cogs.player")  
+
+def _install_signal_handlers(loop: asyncio.AbstractEventLoop):
+    def _handle(sig):
+        log.info(f"Recebido sinal {sig.name}, encerrando…")
+        if scheduler.running:
+            scheduler.shutdown(wait=False)
+        loop.create_task(bot.close())
+
+    for s in (signal.SIGINT, signal.SIGTERM):
+        try:
+            loop.add_signal_handler(s, _handle, s)
+        except NotImplementedError:
+            signal.signal(s, lambda *_: asyncio.create_task(bot.close()))
+
 if __name__ == "__main__":
-    if not TOKEN:
-        raise ValueError("O token do bot não foi definido no .env (BOT_TOKEN).")
-    print("Iniciando bot...")
-    client.run(TOKEN)
+    log.info("Iniciando bot...")
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    _install_signal_handlers(loop)
 
-def shutdown_handler(sig, frame):
-    print("Encerrando bot...")
-    # Desconecta do Discord
-    loop = asyncio.get_event_loop()
-    loop.create_task(client.close())
-    loop.stop()
-    sys.exit(0)
-
-signal.signal(signal.SIGINT, shutdown_handler)
-signal.signal(signal.SIGTERM, shutdown_handler)
+    try:
+        loop.run_until_complete(startup())
+        bot.run(TOKEN)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        if scheduler.running:
+            scheduler.shutdown(wait=False)
+        log.info("Encerrado.")

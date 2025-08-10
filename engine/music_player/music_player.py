@@ -15,18 +15,22 @@ async def execute(message):
     guild_id = message.guild.id
     server_queue = queues.get(guild_id)
 
-    if server_queue and not server_queue.playing and server_queue.connection.is_paused():
+    # Se existe fila, está parado e apenas pausado
+    if server_queue and not server_queue.playing and server_queue.connection and server_queue.connection.is_paused():
         await execute_resume(message)
         return await discord_actions.send_message(message.channel, "🎶 Prontinho! A música voltou a tocar.")
 
-    song_url = get_youtube_url(message)
+    song_url = await get_youtube_url(message)
     if not song_url:
-        return await discord_actions.send_message(message.channel, "😕 Hmm... Não consegui encontrar essa faixa. Será que você pode tentar com outro nome ou link?")
+        return await discord_actions.send_message(
+            message.channel,
+            "😕 Hmm... Não consegui encontrar essa faixa. Será que você pode tentar com outro nome ou link?"
+        )
 
     if not server_queue:
-        connection = await discord_actions.connect_voice_channel(message)
+        connection = await discord_actions.ensure_voice_connection(message, None)
         if not connection:
-            return await discord_actions.send_message(message.channel, "📢 Ops! Parece que você não está em um canal de voz. Consegue conectar em algum para eu poder iniciar?")
+            return
 
         server_queue = GuildQueue(
             guild_id=guild_id,
@@ -37,17 +41,28 @@ async def execute(message):
         queues[guild_id] = server_queue
 
         await server_queue.play(bot=message.guild.me, song_url=song_url)
-        return await discord_actions.send_message(message.channel, f"🎧 Tocando agora: *{server_queue.playing_now['title']}*. Espero que curta!")
+        return await discord_actions.send_message(
+            message.channel,
+            f"🎧 Tocando agora: *{server_queue.playing_now['title']}*. Espero que curta!"
+        )
+    
+    connection = await discord_actions.ensure_voice_connection(message, server_queue)
+    if not connection:
+        return
+    try:
+        info = await asyncio.wait_for(YTDLSource.extract_info(song_url), timeout=20)
+    except asyncio.TimeoutError:
+        return await discord_actions.send_message(
+            message.channel,
+            "⌛ Demorou demais para buscar a faixa. Tenta novamente por favor?"
+        )
 
-    # Verifica metadados antes de baixar o áudio
-    info = await YTDLSource.extract_info(song_url)
     if not info:
         return await discord_actions.send_message(
             channel=message.channel,
             message_text="⚠️ Tive um probleminha ao buscar as informações dessa faixa. Pode tentar de novo pra mim?"
         )
 
-    # Se for playlist, adiciona todas à fila
     if 'entries' in info and info.get('_type') == 'playlist':
         return await manage_playlist(
             playlist=info['entries'],
@@ -55,7 +70,6 @@ async def execute(message):
             server_queue=server_queue
         )
 
-    # Se for música individual, cria o player
     player = await YTDLSource.from_url(song_url, stream=True, message=message)
     if not player:
         return
@@ -67,7 +81,6 @@ async def execute(message):
         message_text=f"➕ Adicionei *{player.title}* à fila."
     )
 
-    # Se nada estiver tocando, inicia
     if not server_queue.is_playing():
         await server_queue.play(bot=message.guild.me, song_url=song_url)
 
@@ -96,10 +109,17 @@ async def execute_skip(message):
 async def execute_stop(message):
     server_queue = queues.get(message.guild.id)
     if not server_queue:
-        return await discord_actions.send_message(message.channel, "🔇 Não encontrei nenhuma música tocando. Acho que já estamos em silêncio.")
+        return await discord_actions.send_message(
+            message.channel,
+            "🔇 Não encontrei nenhuma música tocando. Acho que já estamos em silêncio."
+        )
+    
     server_queue.clear()
-    await server_queue.disconnect()
-    queues.pop(message.guild.id, None)
+    try:
+        await server_queue.disconnect()
+    finally:
+        queues.pop(message.guild.id, None)
+
 
 
 async def execute_jump_to(message):
@@ -148,30 +168,76 @@ async def manage_playlist(playlist, message, server_queue):
         await server_queue.play(bot=message.guild.me, song_url=server_queue.songs[0]['url'])
 
 
-def get_youtube_url(message):
+async def get_youtube_url(message):
+    """
+    Versão assíncrona: usa aiohttp (não bloqueia o event loop).
+    - Se o input já for URL válida, retorna direto.
+    - Caso contrário, tenta buscar no YouTube. Se falhar, usa fallback `ytsearch1:<query>`.
+    """
+    import aiohttp
+
     parts = message.content.split(' ')
     parts.pop(0)
-    query = ' '.join(parts)
+    query = ' '.join(parts).strip()
 
     if validators.url(query):
         return query
 
-    encoded = urllib.parse.urlencode({"search_query": query.lower()})
-    with urllib.request.urlopen(f"https://www.youtube.com/results?{encoded}") as response:
-        results = re.findall(r"watch\?v=(\S{11})", response.read().decode())
-    return f"https://www.youtube.com/watch?v={results[0]}" if results else False
+    if not query:
+        return False
+
+    # Tenta scraping leve (com timeout curto)
+    params = {"search_query": query.lower()}
+    url = f"https://www.youtube.com/results?{urllib.parse.urlencode(params)}"
+
+    try:
+        timeout = aiohttp.ClientTimeout(total=6)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.get(url, headers={"User-Agent": "Mozilla/5.0"}) as resp:
+                if resp.status != 200:
+                    # fallback direto para ytsearch1
+                    return f"ytsearch1:{query}"
+                text = await resp.text()
+    except Exception:
+        # Qualquer erro de rede -> fallback ytsearch
+        return f"ytsearch1:{query}"
+
+    results = re.findall(r"watch\?v=(\S{11})", text)
+    if results:
+        return f"https://www.youtube.com/watch?v={results[0]}"
+
+    # Fallback confiável para o extractor do yt-dlp
+    return f"ytsearch1:{query}"
+
 
 
 async def check_inactivity_queues():
     print("Checking for inactivity...")
     for guild_id, instance in list(queues.items()):
-        if not instance.is_playing():
-            await discord_actions.send_message(
-                channel=instance.text_channel,
-                message_text='👋 Hey~ Tá todo mundo quieto...',
-                message_description='💤 Como não estão ouvindo mais nada, vou me desconectar por enquanto. Me chama se precisar! ✨'
-            )
-            instance.skip()
-            await instance.disconnect()
-            queues.pop(guild_id, None)
-            print(f"Desconectado por inatividade: {guild_id}")
+        try:
+            # Se não está tocando ou a conexão caiu, encerra
+            not_playing = not instance.is_playing()
+            disconnected = not getattr(instance.connection, "is_connected", lambda: False)()
+            if not_playing or disconnected:
+                try:
+                    await discord_actions.send_message(
+                        channel=instance.text_channel,
+                        message_text='👋 Hey~ Tá todo mundo quieto...',
+                        message_description='💤 Como não estão ouvindo mais nada, vou me desconectar por enquanto. Me chama se precisar! ✨'
+                    )
+                except:
+                    pass
+                # garante parada e desconexão
+                try:
+                    instance.skip()
+                except:
+                    pass
+                try:
+                    await instance.disconnect()
+                except:
+                    pass
+                queues.pop(guild_id, None)
+                print(f"Desconectado por inatividade: {guild_id}")
+        except Exception as e:
+            print(f"[inactivity] erro na guild {guild_id}: {e}")
+
