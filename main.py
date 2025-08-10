@@ -2,7 +2,6 @@ import os
 import asyncio
 import logging
 import signal
-import sys
 
 from dotenv import load_dotenv
 
@@ -38,15 +37,16 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.voice_states = True 
 
-bot = commands.Bot(command_prefix="!#", intents=intents, help_command=None)
+bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 
 # ----------------- SCHEDULER -----------------
+## Funções para as features que precisam rodar de tempos em tempos
 scheduler = AsyncIOScheduler(
     timezone=ZoneInfo("America/Sao_Paulo"),
     job_defaults={
-        "coalesce": True,          # junta execuções atrasadas em 1
-        "max_instances": 1,        # evita overlaps do mesmo job
-        "misfire_grace_time": 30,  # tolerância para pequenos atrasos
+        "coalesce": True,         
+        "max_instances": 1,      
+        "misfire_grace_time": 30,  
     },
 )
 
@@ -83,6 +83,7 @@ async def birthday_announcement_job():
 # ----------------- EVENTOS -----------------
 @bot.event
 async def on_ready():
+    ## Inicia o bot e registra os eventos schedule
     log.info(f"Aiko bot conectado como {bot.user} (id={bot.user.id})")
 
     if not getattr(bot, "_scheduler_started", False):
@@ -108,7 +109,7 @@ async def on_ready():
 
         log.info("Scheduler iniciado.")
 
-# Comandos simples fora do cog (mantidos)
+# Comandos gerais - Fora dos cogs
 @bot.command(name="test")
 async def test_cmd(ctx: commands.Context):
     await discord_actions.send_message(channel=ctx.channel, message_text="I am connected and working!")
@@ -134,7 +135,7 @@ async def on_command_error(ctx: commands.Context, error: commands.CommandError):
 
 # ----------------- BOOTSTRAP -----------------
 async def startup():
-    # Carrega cogs
+    # Carrega cogs (responsaveis pelos comandos)
     await bot.load_extension("engine.cogs.birthdays") 
     await bot.load_extension("engine.cogs.player")  
 

@@ -12,8 +12,8 @@ class Birthdays(commands.Cog):
     @commands.command(name="bdayadd")
     @commands.has_permissions(manage_guild=True)
     async def bday_add(self, ctx, ddmm: str):
+        """Adiciona aniversário."""
         member = ctx.author
-        # valida dd/mm
         try:
             d, m = map(int, ddmm.split("/"))
             assert 1 <= d <= 31 and 1 <= m <= 12
@@ -25,11 +25,14 @@ class Birthdays(commands.Cog):
     @commands.command(name="bdayremove")
     @commands.has_permissions(manage_guild=True)
     async def bday_remove(self, ctx, member: discord.Member):
+        """Remove aniversário do membro especificado."""
         ok = await remove_birthday_user(str(ctx.guild.id), str(member.id))
         await ctx.reply("✅ Removido." if ok else "Nada para remover.")
 
     @commands.command(name="bdaylist")
     async def bday_list(self, ctx):
+        """Lista os aniversários do servidor."""
+
         users = await list_birthday_users(str(ctx.guild.id))
         if not users:
             return await ctx.reply("Nenhum aniversário cadastrado neste servidor.")
@@ -39,6 +42,8 @@ class Birthdays(commands.Cog):
     @commands.command(name="bdaychannel")
     @commands.has_permissions(manage_guild=True)
     async def set_bday_channel(self, ctx: commands.Context, channel: discord.TextChannel | None):
+        """Define o canal onde os aniversários serão anunciados através do channel_id."""
+
         cid = channel.id if channel else None
         await update_guild_cfg(str(ctx.guild.id), birthday_channel_id=str(cid) if cid else None)
         await ctx.reply(f"Canal de aniversários definido para: {channel.mention if channel else 'padrão do servidor'} ✅")
@@ -68,7 +73,7 @@ class Birthdays(commands.Cog):
 
     @commands.command(name="bdaystoday")
     async def birthdays_today(self, ctx: commands.Context):
-        await birthdays.announce_for_guild(ctx.guild)
+        await birthdays.announce_for_guild(ctx.guild, True)
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Birthdays(bot))

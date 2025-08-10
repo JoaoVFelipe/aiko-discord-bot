@@ -1,4 +1,3 @@
-# engine/events/birthdays.py
 import random
 import discord
 import datetime as dt
@@ -32,33 +31,36 @@ async def check_announce_for_guild(guild: discord.Guild) -> bool:
     if last_date == today:
         return False  # já anunciou hoje
 
-    # horário alvo de HOJE
     due = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
 
-    # dispara apenas dentro da janela [due, due+59s]
     delta_s = (now - due).total_seconds()
+    # dentro da janela (horário + 59s) -> Anuncia
     if 0 <= delta_s <= 59:
         done = await announce_for_guild(guild)
         if done:
             await update_guild_cfg(str(guild.id), last_birthday_announce_date=today)
             return True
 
-    # fora da janela → não anuncia
+    # fora da janela -> não anuncia
     return False
 
-async def announce_for_guild(guild: discord.Guild) -> bool:
+async def announce_for_guild(guild: discord.Guild, forced=False) -> bool:
     cfg = await get_guild_cfg(str(guild.id))
     channel_id = cfg.get("birthday_channel_id")
     channel = guild.get_channel(int(channel_id)) if channel_id else None
     if not channel:
         me = guild.me
         channel = guild.system_channel or next((c for c in guild.text_channels if c.permissions_for(me).send_messages), None)
-    if not channel:
-        return False
+        
+        if not channel:
+            return False
 
     ddmm = _now_brt().strftime("%d/%m")
-    users = await find_birthdays_ddmm(ddmm, str(guild.id))  # <-- FILTRA por guild
+    users = await find_birthdays_ddmm(ddmm, str(guild.id))
     if not users:
+        if(forced):
+              await channel.send("Sem aniversariantes hoje!")
+              return True
         return False
 
     mentions = " ".join(f"<@{uid}>" for uid in users)

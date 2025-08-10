@@ -9,7 +9,7 @@ COOKIES_PATH = os.getenv('COOKIES_PATH')
 
 ytdl_format_options = {
     'format': 'bestaudio/best',
-    'noplaylist': False,  # Permite playlists, mas vamos tratar fora
+    'noplaylist': False, 
     'extract_flat': False,
     'quiet': True,
     'default_search': 'auto',
@@ -49,7 +49,6 @@ class YTDLSource(discord.PCMVolumeTransformer):
                 await message.channel.send(f"Erro ao buscar a música: {str(e)}")
             return None
 
-        # Playlist detectada, retorno direto do dict para tratamento externo
         if 'entries' in data:
             return data
 

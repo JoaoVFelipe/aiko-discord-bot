@@ -15,12 +15,11 @@ async def execute(message):
     guild_id = message.guild.id
     server_queue = queues.get(guild_id)
 
-    # Se existe fila, está parado e apenas pausado → retoma
+    # Se existe fila, está parado e apenas pausado
     if server_queue and not server_queue.playing and server_queue.connection and server_queue.connection.is_paused():
         await execute_resume(message)
         return await discord_actions.send_message(message.channel, "🎶 Prontinho! A música voltou a tocar.")
 
-    # ⬇️ AGORA ASSÍNCRONO (evita travar o loop)
     song_url = await get_youtube_url(message)
     if not song_url:
         return await discord_actions.send_message(
@@ -29,7 +28,6 @@ async def execute(message):
         )
 
     if not server_queue:
-        # usa seu ensure_voice_connection movido para discord_actions
         connection = await discord_actions.ensure_voice_connection(message, None)
         if not connection:
             return
@@ -47,13 +45,10 @@ async def execute(message):
             message.channel,
             f"🎧 Tocando agora: *{server_queue.playing_now['title']}*. Espero que curta!"
         )
-
-    # Garante conexão ok (move/reconecta se preciso)
+    
     connection = await discord_actions.ensure_voice_connection(message, server_queue)
     if not connection:
         return
-
-    # 🔒 Timeout para evitar travas longas no extractor
     try:
         info = await asyncio.wait_for(YTDLSource.extract_info(song_url), timeout=20)
     except asyncio.TimeoutError:
@@ -118,8 +113,7 @@ async def execute_stop(message):
             message.channel,
             "🔇 Não encontrei nenhuma música tocando. Acho que já estamos em silêncio."
         )
-
-    # limpa fila e tenta desconectar de forma segura
+    
     server_queue.clear()
     try:
         await server_queue.disconnect()
@@ -205,7 +199,7 @@ async def get_youtube_url(message):
                     return f"ytsearch1:{query}"
                 text = await resp.text()
     except Exception:
-        # Qualquer erro de rede → fallback ytsearch
+        # Qualquer erro de rede -> fallback ytsearch
         return f"ytsearch1:{query}"
 
     results = re.findall(r"watch\?v=(\S{11})", text)
