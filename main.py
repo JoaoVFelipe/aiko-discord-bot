@@ -29,6 +29,7 @@ log = logging.getLogger("aiko.main")
 # ----------------- ENV -----------------
 load_dotenv()
 TOKEN = os.getenv("BOT_TOKEN")
+
 if not TOKEN:
     raise ValueError("O token do bot não foi definido no .env (BOT_TOKEN).")
 
@@ -37,7 +38,7 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.voice_states = True 
 
-bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
+bot = commands.Bot(command_prefix="!#", intents=intents, help_command=None)
 
 # ----------------- SCHEDULER -----------------
 scheduler = AsyncIOScheduler(

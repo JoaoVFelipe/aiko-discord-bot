@@ -1,93 +1,169 @@
 {
-    "commands": {
-        "groups": [
-            {
-                "group_name": "Player de Música",
-                "group_description": "Comandos do player de música",
-                "group_commands": [
-                    {
-                        "name": "play",
-                        "usage": "!play [titulo, URL]",
-                        "description": "Executa uma faixa especificada, adiciona faixas a fila caso uma música já esteja executando, ou volta a executar uma faixa que esteja pausada!",
-                        "examples": [
-                            {
-                                "command":  "!play [titulo]",
-                                "explanation": "Executo uma busca por uma música com o título inserido, e toco o primeiro resultado que encontrar"
-                            },
-                            {
-                                "command":  "!play [URL]",
-                                "explanation": "Executo a faixa especificada. No caso de playlists, adiciono todos os itens da lista na fila de execução."
-                            }
-                        ]
-                    },
-                    {
-                        "name": "pause",
-                        "usage": "!pause",
-                        "description": "Pausa a música em execução!",
-                        "examples": [
-                            {
-                                "command":  "!pause",
-                                "explanation": "Pauso a música em execução! Para retomar, digite !resume!"
-                            }
-                        ]
-                    },
-                      {
-                        "name": "resume",
-                        "usage": "!resume",
-                        "description": "Retoma a música pausada!",
-                        "examples": [
-                            {
-                                "command":  "!resume",
-                                "explanation": "Retomo a música que esteja pausada!"
-                            }
-                        ]
-                    },
-                    {
-                        "name": "stop",
-                        "usage": "!stop",
-                        "description": "Finaliza a execução da faixa ou da lista de execução.",
-                        "examples": [
-                            {
-                                "command":  "!stop",
-                                "explanation": "Finaliza a execução do que estiver tocando. Caso haja uma fila, a mesma é limpa e eu me desconecto do canal."
-                            }
-                        ]
-                    },
-                    {
-                        "name": "queue",
-                        "usage": "!queue",
-                        "description": "Mostra a fila de execução.",
-                        "examples": [
-                            {
-                                "command":  "!queue",
-                                "explanation": "Mostro o status atual da fila de execução, atualmente limitada!"
-                            }
-                        ]
-                    },
-                    {
-                        "name": "next",
-                        "usage": "!next",
-                        "description": "Passa para a próxima faixa na fila de execução.",
-                        "examples": [
-                            {
-                                "command":  "!next",
-                                "explanation": "Passo para a próxima faixa na fila de execução. Caso não haja nenhuma faixa a ser tocada a seguir, paro a execução da música atual."
-                            }
-                        ]
-                    },
-                    {
-                        "name": "jump to",
-                        "usage": "!jump_to [#numero]",
-                        "description": "Pula para a faixa especificada.",
-                        "examples": [
-                            {
-                                "command":  "!jump_to 2",
-                                "explanation": "Pulo a execução para faixa com o número especificado na fila. Para ver as faixas e seus respectivos lugares na fila, digite !queue."
-                            }
-                        ]
-                    }
-                ]
-            }
+  "commands": {
+    "groups": [
+      {
+        "group_name": "Player de Música",
+        "group_description": "Comandos do player de música",
+        "group_commands": [
+          {
+            "name": "play",
+            "usage": "!play [titulo|URL]",
+            "description": "Executa uma faixa especificada, adiciona faixas à fila caso uma música já esteja tocando, ou retoma uma faixa pausada.",
+            "examples": [
+              {
+                "command": "!play [titulo]",
+                "explanation": "Executo uma busca pelo título informado e toco o primeiro resultado encontrado."
+              },
+              {
+                "command": "!play [URL]",
+                "explanation": "Executo a faixa especificada. Se for playlist, adiciono todos os itens na fila."
+              }
+            ]
+          },
+          {
+            "name": "pause",
+            "usage": "!pause",
+            "description": "Pausa a música em execução.",
+            "examples": [
+              {
+                "command": "!pause",
+                "explanation": "Pauso a música atual. Para retomar, use !resume."
+              }
+            ]
+          },
+          {
+            "name": "resume",
+            "usage": "!resume",
+            "description": "Retoma a música pausada.",
+            "examples": [
+              {
+                "command": "!resume",
+                "explanation": "Retomo a música que está pausada."
+              }
+            ]
+          },
+          {
+            "name": "stop",
+            "usage": "!stop",
+            "description": "Para a execução e limpa a fila.",
+            "examples": [
+              {
+                "command": "!stop",
+                "explanation": "Finalizo o que estiver tocando, limpo a fila e me desconecto do canal."
+              }
+            ]
+          },
+          {
+            "name": "queue",
+            "usage": "!queue",
+            "description": "Mostra a fila de execução.",
+            "examples": [
+              {
+                "command": "!queue",
+                "explanation": "Exibo o status atual da fila de execução."
+              }
+            ]
+          },
+          {
+            "name": "next",
+            "usage": "!next",
+            "description": "Pula para a próxima faixa na fila.",
+            "examples": [
+              {
+                "command": "!next",
+                "explanation": "Vou para a próxima faixa; se não houver, paro a execução atual."
+              }
+            ]
+          },
+          {
+            "name": "jump to",
+            "usage": "!jump_to [#numero]",
+            "description": "Pula para a faixa especificada na fila.",
+            "examples": [
+              {
+                "command": "!jump_to 2",
+                "explanation": "Pulo para a faixa de número 2 na fila. Use !queue para ver a posição das faixas."
+              }
+            ]
+          }
         ]
-    }
+      },
+      {
+        "group_name": "Aniversários",
+        "group_description": "Comandos para cadastro e anúncio de aniversários do servidor",
+        "group_commands": [
+          {
+            "name": "bdayadd",
+            "usage": "!bdayadd [dd/mm]",
+            "description": "Cadastra a sua data de aniversário no servidor. (Requer permissão: Gerenciar Servidor)",
+            "examples": [
+              {
+                "command": "!bdayadd 10/08",
+                "explanation": "Cadastro meu aniversário como 10 de agosto."
+              }
+            ]
+          },
+          {
+            "name": "bdayremove",
+            "usage": "!bdayremove [@membro]",
+            "description": "Remove o aniversário do membro indicado. (Requer permissão: Gerenciar Servidor)",
+            "examples": [
+              {
+                "command": "!bdayremove @Usuário",
+                "explanation": "Remove o cadastro de aniversário do usuário mencionado."
+              }
+            ]
+          },
+          {
+            "name": "bdaylist",
+            "usage": "!bdaylist",
+            "description": "Lista todos os aniversários cadastrados neste servidor.",
+            "examples": [
+              {
+                "command": "!bdaylist",
+                "explanation": "Exibo os usuários e suas respectivas datas cadastradas."
+              }
+            ]
+          },
+          {
+            "name": "bdaychannel",
+            "usage": "!bdaychannel [#canal]",
+            "description": "Define o canal onde os anúncios de aniversário serão enviados. Use sem parâmetro para voltar ao padrão do servidor. (Requer permissão: Gerenciar Servidor)",
+            "examples": [
+              {
+                "command": "!bdaychannel #geral",
+                "explanation": "Defino o canal de anúncios de aniversário para #geral."
+              },
+              {
+                "command": "!bdaychannel",
+                "explanation": "Retorno para o canal padrão do servidor."
+              }
+            ]
+          },
+          {
+            "name": "bdaytime",
+            "usage": "!bdaytime HH:MM",
+            "description": "Define o horário (BRT) diário para os anúncios automáticos de aniversário. (Requer permissão: Gerenciar Servidor)",
+            "examples": [
+              {
+                "command": "!bdaytime 09:30",
+                "explanation": "Agendo os anúncios diários para 09:30 (BRT)."
+              }
+            ]
+          },
+          {
+            "name": "bdaystoday",
+            "usage": "!bdaystoday",
+            "description": "Força o anúncio dos aniversários de hoje imediatamente no canal configurado.",
+            "examples": [
+              {
+                "command": "!bdaystoday",
+                "explanation": "Disparo o anúncio de aniversários do dia para este servidor, agora."
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
 }
