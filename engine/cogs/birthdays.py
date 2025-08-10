@@ -10,7 +10,6 @@ class Birthdays(commands.Cog):
 
     # ----- comandos -----
     @commands.command(name="bdayadd")
-    @commands.has_permissions(manage_guild=True)
     async def bday_add(self, ctx, ddmm: str):
         """Adiciona aniversário."""
         member = ctx.author
