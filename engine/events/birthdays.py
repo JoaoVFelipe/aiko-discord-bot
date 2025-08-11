@@ -42,7 +42,7 @@ async def check_announce_for_guild(guild: discord.Guild, store: BirthdaysStore) 
 
     # dentro da janela (horário + 59s) -> Anuncia
     if 0 <= delta_s <= 59:
-        done = await announce_for_guild(guild, store)
+        done = await announce_for_guild(guild, store, False)
         if done:
             await store.update_guild_cfg(guild.id, last_birthday_announce_date=today)
             return True
