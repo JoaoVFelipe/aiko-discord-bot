@@ -73,7 +73,7 @@ class Birthdays(commands.Cog):
 
     @commands.command(name="bdaystoday")
     async def birthdays_today(self, ctx: commands.Context):
-        await birthdays.announce_for_guild(ctx.guild, True)
+        await birthdays.announce_for_guild(ctx.guild, self.store, True)
 
 async def setup(bot: commands.Bot):
     store = BirthdaysStore()
