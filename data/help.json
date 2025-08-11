@@ -163,6 +163,67 @@
             ]
           }
         ]
+      },
+      {
+        "group_name": "Palavra do Dia",
+        "group_description": "Comandos para enviar e configurar a Palavra do Dia (Dicionário Aberto)",
+        "group_commands": [
+          {
+            "name": "wotd",
+            "usage": "!wotd",
+            "description": "Envia a palavra do dia agora no canal atual.",
+            "examples": [
+              {
+                "command": "!wotd",
+                "explanation": "Busco a palavra do dia e mostro sua definição."
+              }
+            ]
+          },
+          {
+            "name": "rword",
+            "usage": "!rword",
+            "description": "Envia uma palavra aleatória com definição.",
+            "examples": [
+              {
+                "command": "!rword",
+                "explanation": "Busco uma palavra aleatória do Dicionário Aberto e mostro sua definição."
+              }
+            ]
+          },
+          {
+            "name": "wotdchannel add",
+            "usage": "!wotdchannel add [#canal]",
+            "description": "Registra um canal para receber o envio diário automático da Palavra do Dia. (Requer permissão: Gerenciar Servidor)",
+            "examples": [
+              {
+                "command": "!wotdchannel add #geral",
+                "explanation": "Registro o canal #geral para receber o WOTD diário."
+              }
+            ]
+          },
+          {
+            "name": "wotdchannel remove",
+            "usage": "!wotdchannel remove [#canal]",
+            "description": "Remove um canal da lista de envio da Palavra do Dia. (Requer permissão: Gerenciar Servidor)",
+            "examples": [
+              {
+                "command": "!wotdchannel remove #geral",
+                "explanation": "Removo o canal #geral da lista de canais que recebem o WOTD."
+              }
+            ]
+          },
+          {
+            "name": "wotdchannel list",
+            "usage": "!wotdchannel list",
+            "description": "Lista todos os canais configurados para receber a Palavra do Dia.",
+            "examples": [
+              {
+                "command": "!wotdchannel list",
+                "explanation": "Mostro todos os canais configurados para receber o WOTD diário."
+              }
+            ]
+          }
+        ]
       }
     ]
   }
