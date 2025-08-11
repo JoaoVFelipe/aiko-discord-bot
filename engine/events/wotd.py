@@ -39,10 +39,6 @@ async def fetch_wotd():
     return entry["orth"], description
 
 async def fetch_random_word():
-    """
-    Passo 1: /random -> {'word': '...', 'wid': ..., 'sense': ...}
-    Passo 2: /word/{word}[/{sense}] -> pega XML e parseia
-    """
     async with aiohttp.ClientSession() as session:
         # pega a palavra aleatória
         async with session.get(API_RANDOM, timeout=15) as r:
@@ -51,13 +47,13 @@ async def fetch_random_word():
         word = rnd["word"]
         sense = rnd.get("sense")
 
-        # busca o verbete completo (se vier sense, tenta usá-lo)
+        # busca o verbete completo
         url = f"{API_WORD}/{word}" if not sense else f"{API_WORD}/{word}/{sense}"
         async with session.get(url, timeout=15) as r:
             r.raise_for_status()
             payload = await r.json()
 
-    # payload pode ser lista (várias aceções) ou obj único
+    # payload pode ser lista ou obj único
     xml_str = payload["xml"] if isinstance(payload, dict) else payload[0]["xml"]
     entry = _parse_xml(xml_str)
 
@@ -66,14 +62,16 @@ async def fetch_random_word():
         tag = f"_{s['gram']}_" if s.get("gram") else ""
         lines.append(f"**{i}.** {tag} {s['def']}".strip())
     description = "\n".join(lines) if lines else "Sem definição disponível."
-    # entry["orth"] aqui deve coincidir com word, mas preferimos o orth normalizado do XML
     return entry["orth"], description
 
-async def post_wotd(dest_channel):
+async def post_wotd(dest_channel, forced=False):
     word, description = await fetch_wotd()
-    await dest_channel.send(f"**A palavra do dia é:** *{word}*!!!\n{description}")
+    if(forced) :
+        await dest_channel.send(f"📖 **A palavra do dia é:** *{word}*!\n{description}")
+    else:
+        await dest_channel.send(f"📖 É hora da palavra do dia! 📖\n **E a palavra do dia é:** *{word}*!\n{description}")
 
 async def post_random_word(dest_channel):
     word, description = await fetch_random_word()
-    await dest_channel.send(f"**A palavra aleatória é:** *{word}*!!!\n{description}")
+    await dest_channel.send(f"**📖 A palavra aleatória é:** *{word}*!\n{description}")
 

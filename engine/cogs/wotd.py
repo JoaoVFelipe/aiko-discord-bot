@@ -10,7 +10,7 @@ class WordOfTheDay(commands.Cog):
 
     @commands.hybrid_command(name="wotd", description="Envia a palavra do dia agora (Dicionário Aberto)")
     async def palavra_do_dia(self, ctx: commands.Context):
-        await wotd.post_wotd(ctx.channel)
+        await wotd.post_wotd(ctx.channel, True)
 
     @commands.hybrid_command(name="rword", description="Envia uma palavra aleatória (Dicionário Aberto)")
     async def random_word(self, ctx: commands.Context):

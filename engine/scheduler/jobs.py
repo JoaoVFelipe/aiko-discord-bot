@@ -8,7 +8,7 @@ import logging
 from pytz import timezone
 
 from engine.music_player import music_player
-from engine.events.wotd import fetch_wotd
+from engine.events.wotd import post_wotd, fetch_wotd
 from engine.events.birthdays import check_announce_for_guild
 
 from engine.storage.wotd_store import WOTDStore
@@ -23,15 +23,13 @@ def register_music_inactivity_job(
     interval_minutes: int = 10,
 ) -> None:
     """
-    Verifica periodicamente filas inativas e toma as ações necessárias
-    (pausar/limpar/desconectar, conforme sua implementação).
+    Verifica periodicamente filas inativas para desconectar o bot de canais de voz.
     """
     async def _job():
         try:
             result = await music_player.check_inactivity_queues()
-            # Ajuste o nível conforme o volume: INFO/DEBUG
             if result:
-                log.debug("Inactivity check result: %s", result)
+                log.debug("[player - music] Inactivity check result: %s", result)
         except Exception:
             log.exception("Erro ao verificar inatividade das filas de música")
     scheduler.add_job(
@@ -46,9 +44,7 @@ def register_music_inactivity_job(
 
 def register_birthdays_minutely_job(bot: discord.Client, scheduler: AsyncIOScheduler) -> None:
     """
-    Roda a cada minuto e verifica todas as guilds.
-    O controle para anunciar 'apenas uma vez por dia' e a janela de 60s
-    ficam no events/birthdays.check_announce_for_guild (como antes).
+    Roda a cada minuto e verifica todas as guilds para anunciar os aniversários no horário solicitado.
     """
     store = BirthdaysStore()
 
@@ -69,7 +65,10 @@ def register_birthdays_minutely_job(bot: discord.Client, scheduler: AsyncIOSched
         replace_existing=True,
     )
 
-def register_wotd_daily_job(bot, scheduler: AsyncIOScheduler, hour=9, minute=0):
+def register_wotd_daily_job(bot, scheduler: AsyncIOScheduler, hour=12, minute=0):
+    """
+    Roda ao meio dia e envia a palavra do dia de acordo com o dicionário aberto em todos os canais registrados.
+    """
     store = WOTDStore()
     async def _job():
         word, description = await fetch_wotd()
@@ -79,7 +78,7 @@ def register_wotd_daily_job(bot, scheduler: AsyncIOScheduler, hour=9, minute=0):
                 try:
                     ch = bot.get_channel(cid) or await bot.fetch_channel(cid)
                     if isinstance(ch, (discord.TextChannel, discord.Thread)):
-                        await ch.send(f"**Palavra do dia:** *{word}*\n{description}")
+                        await post_wotd(ch)
                         log.info(f"[events - wotd] Palavra do dia enviada no canal {cid}")
 
                 except discord.Forbidden:

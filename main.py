@@ -56,7 +56,7 @@ async def on_ready():
     if not getattr(bot, "_scheduler_started", False):
         register_music_inactivity_job(scheduler, interval_minutes=10)
         register_birthdays_minutely_job(bot, scheduler)
-        register_wotd_daily_job(bot, scheduler, hour=12, minute=0)
+        register_wotd_daily_job(bot, scheduler, hour=20, minute=5)
         scheduler.start()
         bot._scheduler_started = True
         bot.scheduler = scheduler
