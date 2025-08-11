@@ -9,14 +9,11 @@ import discord
 from discord.ext import commands
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED
-from apscheduler.triggers.interval import IntervalTrigger
 
 from zoneinfo import ZoneInfo
 
 from engine import discord_actions, general
-from engine.music_player import music_player
-from engine.events import birthdays
+from engine.scheduler.jobs import register_wotd_daily_job, register_birthdays_minutely_job, register_music_inactivity_job
 
 # ----------------- LOGGING -----------------
 logging.basicConfig(
@@ -37,7 +34,7 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.voice_states = True 
 
-bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
+bot = commands.Bot(command_prefix="!#", intents=intents, help_command=None)
 
 # ----------------- SCHEDULER -----------------
 ## Funções para as features que precisam rodar de tempos em tempos
@@ -50,36 +47,6 @@ scheduler = AsyncIOScheduler(
     },
 )
 
-# def _job_listener(event):
-#     if event.exception:
-#         log.exception(f"[scheduler] Job {getattr(event, 'job_id', '?')} falhou", exc_info=event.exception)
-#     else:
-#         log.debug(f"[scheduler] Job {getattr(event, 'job_id', '?')} executado com sucesso")
-
-# scheduler.add_listener(_job_listener, EVENT_JOB_ERROR | EVENT_JOB_EXECUTED)
-
-async def inactivity_check_job():
-    try:
-        result = await music_player.check_inactivity_queues()
-        if result:
-            log.info(f"[music] {result}")
-    except Exception as e:
-        log.exception(f"Erro no inactivity_check_job: {e}")
-
-async def birthday_announcement_job():
-    """Roda 1x/min e tenta anunciar para cada guild, se 'já deu a hora' e não anunciou hoje."""
-    try:
-        # itera pelas guilds atuais do bot
-        for guild in bot.guilds:
-            try:
-                announced = await birthdays.check_announce_for_guild(guild)
-                if announced:
-                    log.info(f"[events - birthdays] Anúncio enviado em guild {guild.id}")
-            except Exception as eg:
-                log.exception(f"Erro ao anunciar em guild {guild.id}: {eg}")
-    except Exception as e:
-        log.exception(f"Erro no birthday_announcement_job: {e}")
-
 # ----------------- EVENTOS -----------------
 @bot.event
 async def on_ready():
@@ -87,26 +54,12 @@ async def on_ready():
     log.info(f"Aiko bot conectado como {bot.user} (id={bot.user.id})")
 
     if not getattr(bot, "_scheduler_started", False):
-        scheduler.add_job(
-            inactivity_check_job,
-            trigger=IntervalTrigger(minutes=15),
-            id="music_inactivity_check",
-            replace_existing=True,
-            next_run_time=None,
-        )
-
-        scheduler.add_job(
-            birthday_announcement_job,
-            trigger=IntervalTrigger(minutes=1),
-            id="bday_announcement_check",
-            replace_existing=True,
-        )
-
+        register_music_inactivity_job(scheduler, interval_minutes=10)
+        register_birthdays_minutely_job(bot, scheduler)
+        register_wotd_daily_job(bot, scheduler, hour=12, minute=0)
         scheduler.start()
         bot._scheduler_started = True
-
         bot.scheduler = scheduler
-
         log.info("Scheduler iniciado.")
 
 # Comandos gerais - Fora dos cogs
@@ -137,6 +90,7 @@ async def on_command_error(ctx: commands.Context, error: commands.CommandError):
 async def startup():
     # Carrega cogs (responsaveis pelos comandos)
     await bot.load_extension("engine.cogs.birthdays") 
+    await bot.load_extension("engine.cogs.wotd")
     await bot.load_extension("engine.cogs.player")  
 
 def _install_signal_handlers(loop: asyncio.AbstractEventLoop):
