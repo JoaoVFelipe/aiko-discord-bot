@@ -40,7 +40,11 @@ async def execute(message):
         )
         queues[guild_id] = server_queue
 
-        await server_queue.play(bot=message.guild.me, song_url=song_url)
+        await server_queue.play_entry(
+            bot=message.guild.me,
+            entry={"url": song_url, "title": "Carregando..."}
+        )
+
         return await discord_actions.send_message(
             message.channel,
             f"🎧 Tocando agora: *{server_queue.playing_now['title']}*. Espero que curta!"
@@ -82,7 +86,7 @@ async def execute(message):
     )
 
     if not server_queue.is_playing():
-        await server_queue.play(bot=message.guild.me, song_url=song_url)
+        await server_queue.play_next(bot=message.guild.me)
 
 
 async def execute_pause(message):
@@ -119,8 +123,6 @@ async def execute_stop(message):
         await server_queue.disconnect()
     finally:
         queues.pop(message.guild.id, None)
-
-
 
 async def execute_jump_to(message):
     server_queue = queues.get(message.guild.id)
@@ -165,7 +167,7 @@ async def manage_playlist(playlist, message, server_queue):
     )
 
     if not server_queue.is_playing():
-        await server_queue.play(bot=message.guild.me, song_url=server_queue.songs[0]['url'])
+        await server_queue.play_next(bot=message.guild.me)
 
 
 async def get_youtube_url(message):

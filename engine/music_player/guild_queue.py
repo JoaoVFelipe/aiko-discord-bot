@@ -1,4 +1,5 @@
 import asyncio
+from typing import Optional, Dict, List
 from engine.music_player.ytdl_source import YTDLSource
 from engine import discord_actions
 
@@ -9,10 +10,16 @@ class GuildQueue:
         self.text_channel = text_channel
         self.voice_channel = voice_channel
         self.connection = connection
-        self.songs = []
-        self.playing_now = None
-        self.playing = False
 
+        self.songs: List[Dict[str, str]] = []
+        self.playing_now: Optional[Dict[str, str]] = None
+        self.playing: bool = False
+
+        # Concurrency & lifecycle
+        self._loop = asyncio.get_running_loop()
+        self._lock = asyncio.Lock() 
+        self._stopped_manually = False     
+    # ---------- fila ----------
     def add_song(self, song: dict):
         self.songs.append(song)
 
@@ -20,25 +27,30 @@ class GuildQueue:
         self.songs.extend(playlist)
 
     def clear(self):
+        # limpa fila e estado atual; não desconecta
         self.songs.clear()
-        self.playing = False
         self.playing_now = None
+        self.playing = False
+        self._stopped_manually = True  # evita auto-avançar no after atual
 
     def jump_to(self, position: int):
         if 0 <= position < len(self.songs):
+            # “corta” a fila até a posição e para a atual; after chamará play_next
             self.songs = self.songs[position:]
-            self.connection.stop()
+            self._stopped_manually = False
+            if self.connection:
+                self.connection.stop()
             return True
         return False
 
     def is_playing(self):
-        return self.connection and (
-            self.connection.is_playing() or self.connection.is_paused()
-        )
+        # Tratar pausado como “ocupado”, para não iniciar outra trilha por engano
+        return bool(self.connection) and (self.connection.is_playing() or self.connection.is_paused())
 
     def skip(self):
         if self.connection:
-            self.connection.stop()
+            self._stopped_manually = False 
+            self.connection.stop() 
 
     def pause(self):
         if self.connection:
@@ -51,8 +63,12 @@ class GuildQueue:
             self.playing = True
 
     async def disconnect(self):
-        if self.connection:
-            await self.connection.disconnect()
+        try:
+            if self.connection:
+                await self.connection.disconnect()
+        finally:
+            self.connection = None
+            self.clear()
 
     def get_queue_summary(self, limit=10) -> str:
         if not self.songs:
@@ -64,41 +80,77 @@ class GuildQueue:
             lines.append(f"➕ E tem mais {len(self.songs) - limit} músicas na fila esperando a vez!")
         return '\n'.join(lines)
 
-    async def play(self, bot, song_url: str):
-        player = await YTDLSource.from_url(song_url, stream=True, message=None)
+    # ---------- reprodução ----------
+    async def play_next(self, bot):
+        """Consome a fila e toca o próximo item (único ponto que dá pop(0))."""
+        async with self._lock:
+            if self._stopped_manually:
+                self._stopped_manually = False
+                return
 
+            if not self.songs:
+                self.playing = False
+                self.playing_now = None
+                return
+
+            entry = self.songs.pop(0)
+            await self._play_entry(bot, entry)
+
+    async def play_entry(self, bot, entry: Dict[str, str]):
+        """Toca uma entrada específica (sem mexer na fila)."""
+        async with self._lock:
+            if self.songs and self.songs[0].get("url") == entry.get("url"):
+                self.songs.pop(0)
+            await self._play_entry(bot, entry)
+
+    async def _play_entry(self, bot, entry: Dict[str, str]):
+        """Prepara player e inicia reprodução."""
+        if not self.connection:
+            await discord_actions.send_message(
+                channel=self.text_channel,
+                message_text="⚠️ Não estou conectado ao canal de voz."
+            )
+            self.playing = False
+            return
+
+        player = await YTDLSource.from_url(entry["url"], stream=True, message=None)
         if not player:
             await discord_actions.send_message(
                 channel=self.text_channel,
-                message_text=f"❌ Não consegui reproduzir esta faixa: {song_url}"
+                message_text=f"❌ Não consegui reproduzir: {entry.get('title') or entry['url']}"
             )
+            self.playing = False
+            self.playing_now = None
+            # Se falhou, tenta próxima (não trava a fila)
+            self._loop.call_soon_threadsafe(asyncio.create_task, self.play_next(bot))
             return
 
-        self.playing_now = {'url': song_url, 'title': player.title}
+        self.playing_now = {"url": entry["url"], "title": getattr(player, "title", entry.get("title", "Desconhecida"))}
         self.playing = True
-
-        loop = asyncio.get_running_loop()
+        self._stopped_manually = False
 
         def after_playback(error):
             if error:
                 print(f"[Erro de reprodução] {error}")
-            loop.call_soon_threadsafe(asyncio.create_task, self.play_next(bot))
+            self._loop.call_soon_threadsafe(asyncio.create_task, self._after_and_next(bot))
 
         try:
             self.connection.play(player, after=after_playback)
         except Exception as e:
             print(f"[Erro ao iniciar reprodução] {e}")
             self.playing = False
-            await discord_actions.send_message(
+            self.playing_now = None
+            self._loop.call_soon_threadsafe(asyncio.create_task, discord_actions.send_message(
                 channel=self.text_channel,
-                message_text=f"❌ Erro ao tentar tocar: {player.title}"
-            )
+                message_text=f"❌ Erro ao tentar tocar: {getattr(player, 'title', entry.get('title', entry['url']))}"
+            ))
+            self._loop.call_soon_threadsafe(asyncio.create_task, self.play_next(bot))
 
-    async def play_next(self, bot):
-        if self.songs:
-            next_song = self.songs.pop(0)
-            await self.play(bot, next_song['url'])
-        else:
+    async def _after_and_next(self, bot):
+        """Chamado após terminar a faixa atual; decide se avança."""
+        if self._stopped_manually:
+            self._stopped_manually = False
             self.playing = False
-            if self.connection:
-                self.connection.stop()
+            self.playing_now = None
+            return
+        await self.play_next(bot)
