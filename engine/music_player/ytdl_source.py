@@ -2,6 +2,7 @@ import os
 import yt_dlp
 import discord
 import asyncio
+import subprocess
 import imageio_ffmpeg as ffmpeg
 
 FFMPEG_PATH = ffmpeg.get_ffmpeg_exe()
@@ -24,6 +25,10 @@ ytdl_format_options = {
     'cookiefile': COOKIES_PATH
 }
 
+ffmpeg_before_options = {
+    'before_options': "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5"
+}
+
 ffmpeg_options = {
     'options': '-vn'
 }
@@ -42,8 +47,11 @@ class YTDLSource(discord.PCMVolumeTransformer):
     async def from_url(cls, url, *, loop=None, stream=False, message=None):
         loop = loop or asyncio.get_event_loop()
 
+        def _work():
+            return ytdl.extract_info(url, download=False)
+
         try:
-            data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=not stream))
+            data = await loop.run_in_executor(None, _work)
         except Exception as e:
             if message:
                 await message.channel.send(f"Erro ao buscar a música: {str(e)}")
@@ -53,13 +61,16 @@ class YTDLSource(discord.PCMVolumeTransformer):
             return data
 
         filename = data['url'] if stream else ytdl.prepare_filename(data)
-        return cls(discord.FFmpegPCMAudio(filename, executable=FFMPEG_PATH, **ffmpeg_options), data=data)
+        return cls(discord.FFmpegPCMAudio(filename,**ffmpeg_before_options, executable=FFMPEG_PATH, **ffmpeg_options, stderr=subprocess.DEVNULL), data=data)
     
     @staticmethod
     async def extract_info(url):
         loop = asyncio.get_event_loop()
         try:
-            return await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=False))
+            def _work():
+                return ytdl.extract_info(url, download=False)
+            
+            return await loop.run_in_executor(None, _work)
         except Exception as e:
             print(f"[Erro ao extrair info]: {e}")
             return None
