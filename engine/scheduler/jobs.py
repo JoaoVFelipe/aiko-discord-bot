@@ -6,9 +6,10 @@ import discord
 import logging
 
 from pytz import timezone
+from zoneinfo import ZoneInfo
 
 from engine.music_player import music_player
-from engine.events.wotd import post_wotd, fetch_wotd
+from engine.events.wotd import post_wotd
 from engine.events.birthdays import check_announce_for_guild
 
 from engine.storage.wotd_store import WOTDStore
@@ -65,29 +66,37 @@ def register_birthdays_minutely_job(bot: discord.Client, scheduler: AsyncIOSched
         replace_existing=True,
     )
 
-def register_wotd_daily_job(bot, scheduler: AsyncIOScheduler, hour=12, minute=0):
-    """
-    Roda ao meio dia e envia a palavra do dia de acordo com o dicionário aberto em todos os canais registrados.
-    """
-    store = WOTDStore()
-    async def _job():
-        word, description = await fetch_wotd()
-        mapping = await store.all_guild_channels()
-        for guild_id, chan_ids in mapping.items():
-            for cid in chan_ids:
-                try:
-                    ch = bot.get_channel(cid) or await bot.fetch_channel(cid)
-                    if isinstance(ch, (discord.TextChannel, discord.Thread)):
-                        await post_wotd(ch)
-                        log.info(f"[events - wotd] Palavra do dia enviada no canal {cid}")
 
-                except discord.Forbidden:
-                    log.exception(f"Erro ao anunciar em canal {cid}: Sem Permissão para falar")
-                    pass
-                except discord.HTTPException as e:
-                    log.exception(f"Erro ao anunciar em guild {cid}: {e}")
-                    pass
+def register_wotd_daily_job(bot, scheduler, hour=12, minute=0):
+    tz = ZoneInfo("America/Sao_Paulo")
+    store = WOTDStore()
+
+    async def _job():
+        try:
+            data = await store.get_today_word()
+            word = data.get("word")
+            lookup_word = data.get("lookup")
+
+            mapping = await store.all_guild_channels()
+            for guild_id, chan_ids in mapping.items():
+                for cid in chan_ids:
+                    try:
+                        ch = bot.get_channel(cid) or await bot.fetch_channel(cid)
+                        if isinstance(ch, (discord.TextChannel, discord.Thread)):
+                            await post_wotd(ch, word, lookup_word=lookup_word)
+                            log.info(f"[events - wotd] Palavra do dia enviada no canal {cid}")
+                    except discord.Forbidden:
+                        log.exception(f"Erro ao anunciar em canal {cid}: Sem permissão para falar")
+                    except discord.HTTPException as e:
+                        log.exception(f"Erro ao anunciar em canal {cid}: {e}")
+        except Exception as e:
+            log.exception("Falha ao executar job de WOTD: %s", e)
+
     scheduler.add_job(
         _job,
-        trigger=CronTrigger(hour=hour, minute=minute, timezone=TZ), id="wotd_daily", replace_existing=True
+        trigger=CronTrigger(hour=hour, minute=minute, timezone=tz),
+        id="wotd_daily",
+        replace_existing=True,
+        coalesce=True,         
+        misfire_grace_time=300, 
     )
