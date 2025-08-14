@@ -10,12 +10,19 @@ class WordOfTheDay(commands.Cog):
 
     @commands.hybrid_command(name="wotd", description="Envia a palavra do dia agora (Dicionário Aberto)")
     async def palavra_do_dia(self, ctx: commands.Context):
-        await wotd.post_wotd(ctx.channel, True)
+        data = await self.store.get_today_word()
+        word = data.get("word")
+        lookup_word = data.get("lookup")
+        await wotd.post_wotd(ctx.channel, word, lookup_word, True)
 
     @commands.hybrid_command(name="rword", description="Envia uma palavra aleatória (Dicionário Aberto)")
     async def random_word(self, ctx: commands.Context):
         await wotd.post_random_word(ctx.channel)
 
+    
+    @commands.hybrid_command(name="refreshword", description="Atualiza a palavra do dia no banco")
+    async def refresh_word(self, ctx: commands.Context):
+        await self.store.refresh_today_word(True)
 
     @commands.hybrid_group(name="wotdchannel", description="Configurar canais para Palavra do Dia", invoke_without_command=True)
     async def wotd_group(self, ctx: commands.Context):
