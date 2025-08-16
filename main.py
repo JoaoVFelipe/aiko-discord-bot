@@ -34,7 +34,7 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.voice_states = True 
 
-bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
+bot = commands.Bot(command_prefix="!#", intents=intents, help_command=None)
 
 # ----------------- SCHEDULER -----------------
 ## Funções para as features que precisam rodar de tempos em tempos
@@ -91,7 +91,8 @@ async def startup():
     # Carrega cogs (responsaveis pelos comandos)
     await bot.load_extension("engine.cogs.birthdays") 
     await bot.load_extension("engine.cogs.wotd")
-    await bot.load_extension("engine.cogs.player")  
+    await bot.load_extension("engine.cogs.player") 
+    await bot.load_extension("engine.cogs.sessions") 
 
 def _install_signal_handlers(loop: asyncio.AbstractEventLoop):
     def _handle(sig):
