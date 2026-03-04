@@ -224,6 +224,120 @@
             ]
           }
         ]
+      },
+      {
+        "group_name": "Moderação de Voz",
+        "group_description": "Comandos para moderar usuários em canais de voz",
+        "group_commands": [
+          {
+            "name": "vmute",
+            "usage": "!vmute [@cargo1] [@cargo2] [motivo]",
+            "description": "Muta TODOS os usuários com os cargos especificados no seu canal de voz. Se não especificar cargo, muta todos os cargos configurados como alvo.",
+            "examples": [
+              {
+                "command": "!vmute @Membro",
+                "explanation": "Muto TODOS os usuários com o cargo @Membro no meu canal de voz."
+              },
+              {
+                "command": "!vmute @Cargo1 @Cargo2",
+                "explanation": "Muto todos os usuários que possuem @Cargo1 OU @Cargo2 no canal."
+              },
+              {
+                "command": "!vmute",
+                "explanation": "Muto TODOS os usuários que possuem qualquer cargo configurado como alvo."
+              }
+            ]
+          },
+          {
+            "name": "vunmute",
+            "usage": "!vunmute [@cargo1] [@cargo2] [motivo]",
+            "description": "Desmuta TODOS os usuários com os cargos especificados no seu canal de voz. Se não especificar cargo, desmuta todos os cargos configurados.",
+            "examples": [
+              {
+                "command": "!vunmute @Membro",
+                "explanation": "Desmuto TODOS os usuários com o cargo @Membro no meu canal de voz."
+              },
+              {
+                "command": "!vunmute @Cargo1 @Cargo2",
+                "explanation": "Desmuto todos os usuários que possuem @Cargo1 OU @Cargo2 no canal."
+              },
+              {
+                "command": "!vunmute",
+                "explanation": "Desmuto TODOS os usuários com cargos configurados como alvo."
+              }
+            ]
+          },
+          {
+            "name": "vmodpanel",
+            "usage": "!vmodpanel [#canal]",
+            "description": "Abre um painel interativo para moderação de voz. Mostra cargos configurados com contagem de usuários, permitindo mutar/desmutar em massa.",
+            "examples": [
+              {
+                "command": "!vmodpanel",
+                "explanation": "Abro um painel interativo mostrando os cargos presentes no seu canal de voz."
+              },
+              {
+                "command": "!vmodpanel #canal-voz",
+                "explanation": "Abro o painel para um canal de voz específico, listando cargos com contagem de membros."
+              }
+            ]
+          },
+          {
+            "name": "vmodconfig add_moderator",
+            "usage": "!vmodconfig add_moderator [@cargo]",
+            "description": "Adiciona um cargo à lista de moderadores que podem usar comandos de moderação de voz. (Requer permissão: Gerenciar Servidor)",
+            "examples": [
+              {
+                "command": "!vmodconfig add_moderator @Moderador",
+                "explanation": "Adiciono o cargo @Moderador como autorizado para moderação de voz."
+              }
+            ]
+          },
+          {
+            "name": "vmodconfig remove_moderator",
+            "usage": "!vmodconfig remove_moderator [@cargo]",
+            "description": "Remove um cargo da lista de moderadores. (Requer permissão: Gerenciar Servidor)",
+            "examples": [
+              {
+                "command": "!vmodconfig remove_moderator @Moderador",
+                "explanation": "Removo o cargo @Moderador da lista de moderadores autorizados."
+              }
+            ]
+          },
+          {
+            "name": "vmodconfig add_target",
+            "usage": "!vmodconfig add_target [@cargo]",
+            "description": "Adiciona um cargo à lista de alvos que podem ser mutados. (Requer permissão: Gerenciar Servidor)",
+            "examples": [
+              {
+                "command": "!vmodconfig add_target @Membro",
+                "explanation": "Adiciono o cargo @Membro como alvo válido para moderação."
+              }
+            ]
+          },
+          {
+            "name": "vmodconfig remove_target",
+            "usage": "!vmodconfig remove_target [@cargo]",
+            "description": "Remove um cargo da lista de alvos. (Requer permissão: Gerenciar Servidor)",
+            "examples": [
+              {
+                "command": "!vmodconfig remove_target @Membro",
+                "explanation": "Removo o cargo @Membro da lista de alvos."
+              }
+            ]
+          },
+          {
+            "name": "vmodconfig list",
+            "usage": "!vmodconfig list",
+            "description": "Lista todas as configurações de moderação de voz do servidor. (Requer permissão: Gerenciar Servidor)",
+            "examples": [
+              {
+                "command": "!vmodconfig list",
+                "explanation": "Mostro os cargos moderadores e os cargos alvos configurados."
+              }
+            ]
+          }
+        ]
       }
     ]
   }

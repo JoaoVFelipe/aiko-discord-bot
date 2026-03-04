@@ -89,9 +89,10 @@ async def on_command_error(ctx: commands.Context, error: commands.CommandError):
 # ----------------- BOOTSTRAP -----------------
 async def startup():
     # Carrega cogs (responsaveis pelos comandos)
-    await bot.load_extension("engine.cogs.birthdays") 
+    await bot.load_extension("engine.cogs.birthdays")
     await bot.load_extension("engine.cogs.wotd")
-    await bot.load_extension("engine.cogs.player")  
+    await bot.load_extension("engine.cogs.player")
+    await bot.load_extension("engine.cogs.voice_moderation")  
 
 def _install_signal_handlers(loop: asyncio.AbstractEventLoop):
     def _handle(sig):
